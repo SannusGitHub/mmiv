@@ -253,7 +253,7 @@ function createPost(data, clickFunc) {
     if (data.imagepath !== null && data.imagepath !== "") {
         const postImg = document.createElement('img');
         postImg.src = data.imagepath;
-        postImg.className = 'image-content';
+        postImg.classList = 'image-content clickable';
 
         postContentDiv.appendChild(postImg);
 

@@ -20,8 +20,6 @@ type PostData struct {
 }
 
 func AddPost(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("addpost requested")
-
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in AddPost, invalid perms!\n")
 		return
@@ -57,13 +55,16 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	res, _ := db.Exec(`INSERT INTO global_ids DEFAULT VALUES`)
+	id, _ := res.LastInsertId()
+
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	postContent := r.FormValue("postcontent")
 
 	WriteToSQL(`
-		INSERT INTO POSTS (username, postcontent, imagepath)
-		VALUES (?, ?, ?)
-	`, currentUsername, postContent, imagePath)
+		INSERT INTO POSTS (id, username, postcontent, imagepath)
+		VALUES (?, ?, ?, ?)
+	`, id, currentUsername, postContent, imagePath)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
@@ -109,35 +110,6 @@ type CommentData struct {
 }
 
 func AddComment(w http.ResponseWriter, r *http.Request) {
-	/*
-		if !DoesUserMatchRank(r, "1") {
-			fmt.Printf("Rank mismatch in AddComment, invalid perms!\n")
-			return
-		}
-
-		var data CommentData
-		err := json.NewDecoder(r.Body).Decode(&data)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		currentUsername := GetUsernameFromCookie(r, "userSessionToken")
-		fmt.Printf("Parent: %s\n", data.ParentPostID)
-		fmt.Printf("User: %s\n", currentUsername)
-		fmt.Printf("Message: %s\n", data.PostContent)
-
-		WriteToSQL(`
-			INSERT INTO COMMENTS (parentpostid, username, postcontent)
-			VALUES (?, ?, ?)
-		`, data.ParentPostID, currentUsername, data.PostContent)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{
-			"status": "success",
-		})
-	*/
-
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in AddPost, invalid perms!\n")
 		return
@@ -173,14 +145,17 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	res, _ := db.Exec(`INSERT INTO global_ids DEFAULT VALUES`)
+	id, _ := res.LastInsertId()
+
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	postContent := r.FormValue("postcontent")
 	ParentPostID := r.FormValue("parentpostid")
 
 	WriteToSQL(`
-		INSERT INTO COMMENTS (parentpostid, username, postcontent, imagepath)
-		VALUES (?, ?, ?, ?)
-	`, ParentPostID, currentUsername, postContent, imagePath)
+		INSERT INTO COMMENTS (id, parentpostid, username, postcontent, imagepath)
+		VALUES (?, ?, ?, ?, ?)
+	`, id, ParentPostID, currentUsername, postContent, imagePath)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{

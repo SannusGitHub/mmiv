@@ -18,7 +18,7 @@ func OpenSQL() {
 
 	WriteToSQL(`
 		CREATE TABLE IF NOT EXISTS posts (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		id INTEGER PRIMARY KEY,
 		username TEXT NOT NULL,
 		postcontent TEXT NOT NULL,
 		imagepath TEXT NOT NULL,
@@ -35,12 +35,17 @@ func OpenSQL() {
 
 	WriteToSQL(`
 		CREATE TABLE IF NOT EXISTS comments (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		id INTEGER PRIMARY KEY,
 		parentpostid INTEGER NOT NULL,
 		username TEXT NOT NULL,
 		postcontent TEXT NOT NULL,
 		imagepath TEXT NOT NULL,
 		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`)
+
+	WriteToSQL(`
+		CREATE TABLE IF NOT EXISTS global_ids (
+		id INTEGER PRIMARY KEY AUTOINCREMENT
 	)`)
 
 	if err = db.Ping(); err != nil {

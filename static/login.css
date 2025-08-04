@@ -17,14 +17,26 @@ html, body {
     padding: 20px;
     border-radius: 10px;
     font-family: Arial, sans-serif;
+    text-align: center;
 }
 
-input[type="text"],
-input[type="password"] {
+img {
+    padding: 2em 0em;
+}
+
+input {
+    color: white;
+    background-color: #191923;
+
     width: 100%;
     padding: 8px;
     margin: 4px 0;
     box-sizing: border-box;
+    border: 1px solid white;
+}
+
+input:focus {
+    outline: none;
 }
 
 button {
@@ -33,6 +45,7 @@ button {
     background-color: #191923;
     transition: background-color 0.2s ease, transform 0.1s ease;
     user-select: none;
+    border: 1px solid white;
 }
 
 button:hover {
