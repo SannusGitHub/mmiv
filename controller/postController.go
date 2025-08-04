@@ -125,7 +125,7 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 		parentpostid constitutes as a post or not
 	*/
 	if !DoesUserMatchRank(r, "1") {
-		fmt.Printf("Rank mismatch in AddPost, invalid perms!\n")
+		fmt.Printf("Rank mismatch in AddComment, invalid perms!\n")
 		return
 	}
 

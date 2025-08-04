@@ -152,7 +152,6 @@ function requestComments(parentpost) {
         },
         (response) => response.json(),
         (data) => {
-            console.log(data);
             data.forEach((element) => {
                 createPost(element);
             });
@@ -261,7 +260,6 @@ function createPost(data, clickFunc) {
 
         postImg.addEventListener('click', function(e) {
             e.stopPropagation();
-            console.log("resize");
             
             if (postImg.style.width === "auto" && postContentDiv.style.display === "block") {
                 postImg.style.width = "150px";
