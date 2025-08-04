@@ -1,0 +1,35 @@
+<head>
+    <link rel="stylesheet" href="/static/index.css">
+</head>
+<body>
+    <script src="/static/index.js"></script>
+    <div class="main">
+        <div class="nav-bar">
+            <img class="main-img" src="/static/img/mmiv_1.png">
+        </div>
+        <div class="nav-bar header accented">
+            <p class="button clickable" onclick="requestPosts()">Return</p>
+            <p class="button clickable" id="post-button">Post</p>
+
+            <div class="nav-bar" style="margin-left: auto;">
+                {{if .IsAdmin}}
+                <p class="button clickable" onclick="">Admin</p>
+                {{end}}
+                <p class="button clickable" onclick="logout()">Logout</p>
+            </div>
+        </div>
+        <div id="content">
+        </div>
+    </div>
+    <div class="accented post-submit" id="post-form">
+        <div class="grab-bar" id="grabBar">Reply</div>
+        <form class="post-form" enctype="multipart/form-data">
+            <textarea id="post-content" name="post-content" placeholder="Write your post..."></textarea>
+            <input id="post-image" type="file" accept="image/*">
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+    <div class="footer">
+        <p>(c) MMIV 2025 - FOREVER</p>
+    </div>
+</body>
