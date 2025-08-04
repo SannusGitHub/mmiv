@@ -254,7 +254,21 @@ function createPost(data, clickFunc) {
         const postImg = document.createElement('img');
         postImg.src = data.imagepath;
         postImg.className = 'image-content';
+
         postContentDiv.appendChild(postImg);
+
+        postImg.addEventListener('click', function(e) {
+            e.stopPropagation();
+            console.log("resize");
+            
+            if (postImg.style.width === "auto" && postContentDiv.style.display === "block") {
+                postImg.style.width = "150px";
+                postContentDiv.style.display = "flex";
+            } else {
+                postImg.style.width = "auto";
+                postContentDiv.style.display = "block";
+            }
+        });
     };
 
     const contentP = document.createElement('p');

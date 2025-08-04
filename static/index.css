@@ -109,6 +109,7 @@ p.button:hover {
 
 .text-content {
     margin: 0;
+    padding: 1em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
