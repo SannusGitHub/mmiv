@@ -245,11 +245,13 @@ function createPost(data, clickFunc) {
     const titleP = document.createElement('p');
     titleP.className = 'header';
     titleP.innerHTML = `#${data.id} <span class="highlight"><b>${data.username}</b></span> @ ${data.timestamp}`;
+    if (data.commentcount !== undefined) {
+        titleP.innerHTML += ` | R: ${data.commentcount}`
+    };
 
     const postContentDiv = document.createElement('div');
     postContentDiv.className = "post-content";
 
-    console.log(data.imagepath);
     if (data.imagepath !== null && data.imagepath !== "") {
         const postImg = document.createElement('img');
         postImg.src = data.imagepath;

@@ -8,15 +8,17 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 )
 
 type PostData struct {
-	Id          string `json:"id"`
-	Username    string `json:"username"`
-	PostContent string `json:"postcontent"`
-	Imagepath   string `json:"imagepath"`
-	Timestamp   string `json:"timestamp"`
+	Id           string `json:"id"`
+	Username     string `json:"username"`
+	PostContent  string `json:"postcontent"`
+	Imagepath    string `json:"imagepath"`
+	Timestamp    string `json:"timestamp"`
+	CommentCount string `json:"commentcount"`
 }
 
 func AddPost(w http.ResponseWriter, r *http.Request) {
@@ -93,6 +95,14 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		countQuery := `SELECT COUNT(*) FROM comments WHERE parentpostid = ?`
+		err = db.QueryRow(countQuery, post.Id).Scan(&post.CommentCount)
+		if err != nil {
+			log.Printf("Error counting comments for post ID %s: %v\n", post.Id, err)
+			post.CommentCount = "0"
+		}
+
 		posts = append(posts, post)
 	}
 
@@ -110,6 +120,10 @@ type CommentData struct {
 }
 
 func AddComment(w http.ResponseWriter, r *http.Request) {
+	/*
+		NOTE: it would probably be a smart idea to add an if-check for whether
+		parentpostid constitutes as a post or not
+	*/
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in AddPost, invalid perms!\n")
 		return
@@ -118,6 +132,25 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {
 		log.Fatal(err)
+		return
+	}
+
+	// untested, shooould check for if parentpostid is a valid id in posts?
+	parentID, err := strconv.Atoi(r.FormValue("parentpostid"))
+	if err != nil {
+		http.Error(w, "Invalid parent post ID", http.StatusBadRequest)
+		return
+	}
+
+	var exists bool
+	err = db.QueryRow(`SELECT EXISTS(SELECT 1 FROM posts WHERE id = ?)`, parentID).Scan(&exists)
+	if err != nil {
+		log.Printf("Database error checking parent post: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, "Parent post does not exist", http.StatusBadRequest)
 		return
 	}
 
