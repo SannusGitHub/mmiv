@@ -5,7 +5,6 @@
     * fix autorequesting new posts whenever a post / comment is submitted (X)
     * general clean-up (man what the fuck is this mess)
 */
-
 function fetchFunction(
     apiUrl, 
     method = 'POST',
@@ -28,19 +27,6 @@ function fetchFunction(
     .catch(error => catchFunc(error));
 };
 
-/*
-fetchFunction(
-    "/api/addUser", 
-    'POST', 
-    { 'Content-Type': 'application/json' }, 
-    { 
-        username: "newUser", 
-        password: "testpassword",
-        rank: "1",
-    }
-)
-*/
-
 function logout() {
     fetchFunction(
         "/api/logout", 
@@ -62,11 +48,33 @@ function requestPosts() {
     setupDraggableForm({
         grabBarLabelText: 'New Post',
         formButtonLabelText: 'Post',
-        apiEndpoint: '/api/addPost',
-        getPayload: () => ({
-            postcontent: document.getElementById("post-content").value
-        }),
-        onSuccess: () => requestPosts()
+        onSubmitForm: function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById("post-image");
+            const textInput = document.getElementById("post-content");
+
+            const formData = new FormData();
+            formData.append("postcontent", textInput.value);
+            formData.append("image", fileInput.files[0]);
+
+            fetch('/api/addPost', {
+                method: "POST",
+                body: formData,
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error("Upload failed");
+                }
+                return response.json();
+            }).then(data => {
+                console.log("Success:", data);
+
+                requestPosts();
+                fileInput.files[0].value = null;
+            }).catch(error => {
+                console.error("Error:", error);
+            });
+        }
     });
 
     fetchFunction(
@@ -98,12 +106,35 @@ function requestComments(parentpost) {
     setupDraggableForm({
         grabBarLabelText: 'Add Comment',
         formButtonLabelText: 'Comment',
-        apiEndpoint: '/api/addComment',
-        getPayload: () => ({
-            parentpostid: parentpost.id,
-            postcontent: document.getElementById("post-content").value
-        }),
-        onSuccess: () => requestComments(parentpost)
+        onSubmitForm: function(e) {
+            e.preventDefault();
+
+            const fileInput = document.getElementById("post-image");
+            const textInput = document.getElementById("post-content");
+            const parentpostID = parentpost.id;
+            
+            const formData = new FormData();
+            formData.append("postcontent", textInput.value);
+            formData.append("image", fileInput.files[0]);
+            formData.append("parentpostid", parentpostID)
+
+            fetch('/api/addComment', {
+                method: "POST",
+                body: formData,
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error("Upload failed");
+                }
+                return response.json();
+            }).then(data => {
+                console.log("Success:", data);
+
+                requestComments(parentpost);
+                fileInput.files[0].value = null;
+            }).catch(error => {
+                console.error("Error:", error);
+            });
+        }
     });
 
     const postsContainer = document.getElementById('content');
@@ -121,6 +152,7 @@ function requestComments(parentpost) {
         },
         (response) => response.json(),
         (data) => {
+            console.log(data);
             data.forEach((element) => {
                 createPost(element);
             });
@@ -134,14 +166,14 @@ function requestComments(parentpost) {
 function setupDraggableForm({
     grabBarLabelText = null,
     formButtonLabelText = null,
-    apiEndpoint,
-    getPayload,
-    onSuccess = () => {},
+    onSubmitForm
 }) {
     const form = document.getElementById("post-form");
     const grabBar = document.getElementById("grabBar");
     const fileInput = document.getElementById("post-image");
     const textInput = document.getElementById("post-content");
+    fileInput.value = null;
+    textInput.value = "";
 
     if (grabBarLabelText !== null) {
         grabBar.textContent = grabBarLabelText;
@@ -181,25 +213,7 @@ function setupDraggableForm({
     };
 
     form.onsubmit = (e) => {
-        e.preventDefault();
-        
-        const formData = new FormData();
-        formData.append("postcontent", textInput.value);
-        formData.append("image", fileInput.files[0]);
-
-        fetch(apiEndpoint, {
-            method: "POST",
-            body: formData,
-        }).then(response => {
-            if (!response.ok) {
-                throw new Error("Upload failed");
-            }
-            return response.json();
-        }).then(data => {
-            console.log("Success:", data);
-        }).catch(error => {
-            console.error("Error:", error);
-        });
+        onSubmitForm(e);
     };
 }
 

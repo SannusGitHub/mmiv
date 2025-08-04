@@ -47,3 +47,16 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     });
 });
+
+/*
+fetchFunction(
+    "/api/addUser", 
+    'POST', 
+    { 'Content-Type': 'application/json' }, 
+    { 
+        username: "sannu", 
+        password: "admin",
+        rank: "2",
+    }
+)
+    */

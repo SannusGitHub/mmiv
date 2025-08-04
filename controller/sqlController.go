@@ -39,6 +39,7 @@ func OpenSQL() {
 		parentpostid INTEGER NOT NULL,
 		username TEXT NOT NULL,
 		postcontent TEXT NOT NULL,
+		imagepath TEXT NOT NULL,
 		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`)
 
