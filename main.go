@@ -12,9 +12,33 @@ func main() {
 	controller.OpenSQL()
 	defer controller.CloseSQL()
 
-	http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
-	tmpl := template.Must(template.ParseFiles("./static/index.html"))
+	http.Handle("/static/img/", http.StripPrefix("/static/img/", http.FileServer(http.Dir("./static/img"))))
+
+	http.HandleFunc("/uploads/", func(w http.ResponseWriter, r *http.Request) {
+		if !controller.DoesUserMatchRank(r, "1") {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		path := r.URL.Path[len("/uploads/"):]
+		filePath := "./uploads/" + path
+
+		http.ServeFile(w, r, filePath)
+	})
+
+	http.Handle("/static/login/", http.StripPrefix("/static/login/", http.FileServer(http.Dir("./static/login"))))
+
+	http.HandleFunc("/static/home/", func(w http.ResponseWriter, r *http.Request) {
+		if !controller.DoesUserMatchRank(r, "1") {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+
+		fs := http.FileServer(http.Dir("./static/home"))
+		http.StripPrefix("/static/home/", fs).ServeHTTP(w, r)
+	})
+
+	tmpl := template.Must(template.ParseFiles("./static/home/index.html"))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		token := controller.GetCookie(r, "userSessionToken")
 		username := controller.GetUsernameFromCookie(r, "userSessionToken")
@@ -26,7 +50,7 @@ func main() {
 			return
 		}
 
-		tmpl.Execute(w, map[string]interface{}{
+		tmpl.Execute(w, map[string]any{
 			"Username": username,
 			"Id":       id,
 			"CSS":      "index.css",
@@ -36,7 +60,7 @@ func main() {
 	})
 
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./static/login.html")
+		http.ServeFile(w, r, "./static/login/login.html")
 	})
 
 	http.HandleFunc("/api/login", func(w http.ResponseWriter, r *http.Request) {

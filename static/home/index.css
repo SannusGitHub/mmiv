@@ -105,6 +105,7 @@ p.button:hover {
     height: auto;
     object-fit: cover;
     flex-shrink: 0;
+    border: 1px solid #777780;
 }
 
 .text-content {

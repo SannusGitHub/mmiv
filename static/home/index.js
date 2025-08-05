@@ -70,7 +70,7 @@ function requestPosts() {
                 console.log("Success:", data);
 
                 requestPosts();
-                fileInput.files[0].value = null;
+                fileInput.value = null;
             }).catch(error => {
                 console.error("Error:", error);
             });

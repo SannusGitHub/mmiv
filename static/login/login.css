@@ -13,11 +13,16 @@ html, body {
 
 #login-container {
     max-width: 300px;
-    margin: 100px auto;
     padding: 20px;
     border-radius: 10px;
     font-family: Arial, sans-serif;
     text-align: center;
+
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    -webkit-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
 }
 
 img {
