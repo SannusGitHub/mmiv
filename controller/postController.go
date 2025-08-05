@@ -12,6 +12,14 @@ import (
 	"time"
 )
 
+/*
+	NOTE: looking back on this, maybe it would have been more useful to have more flexible code that
+	would allow for both "Comment" posts and "Post" posts to be unified
+
+	maybe it'll come in use eventually to have these both separated, a.la post-only or comment-only
+	feature but right now I highly doubt it
+*/
+
 type PostData struct {
 	Id           string `json:"id"`
 	Username     string `json:"username"`
@@ -72,6 +80,40 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"status": "success",
 	})
+}
+
+func DeletePost(w http.ResponseWriter, r *http.Request) {
+	if !DoesUserMatchRank(r, "2") {
+		fmt.Printf("Rank mismatch in RemovePost, invalid perms!\n")
+		return
+	}
+
+	var data PostData
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	postImagePath := QueryFromSQL(`SELECT imagepath FROM POSTS WHERE id = ?`, data.Id)
+	if postImagePath != "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
+		joinedImagePath := filepath.Join(cwd, postImagePath)
+		fmt.Println(joinedImagePath)
+		err = os.Remove(joinedImagePath)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	WriteToSQL(`DELETE FROM posts WHERE id = ?`, data.Id)
+
+	fmt.Printf("Post ID %s deleted successfully\n", data.Id)
 }
 
 func RequestPost(w http.ResponseWriter, r *http.Request) {

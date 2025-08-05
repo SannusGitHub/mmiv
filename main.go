@@ -12,6 +12,7 @@ func main() {
 	controller.OpenSQL()
 	defer controller.CloseSQL()
 
+	// todo: privatize this one as well
 	http.Handle("/static/img/", http.StripPrefix("/static/img/", http.FileServer(http.Dir("./static/img"))))
 
 	http.HandleFunc("/uploads/", func(w http.ResponseWriter, r *http.Request) {
@@ -73,6 +74,10 @@ func main() {
 
 	http.HandleFunc("/api/addPost", func(w http.ResponseWriter, r *http.Request) {
 		controller.AddPost(w, r)
+	})
+
+	http.HandleFunc("/api/deletePost", func(w http.ResponseWriter, r *http.Request) {
+		controller.DeletePost(w, r)
 	})
 
 	http.HandleFunc("/api/requestPost", func(w http.ResponseWriter, r *http.Request) {
