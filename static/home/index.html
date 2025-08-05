@@ -1,5 +1,6 @@
 <head>
     <link rel="stylesheet" href="/static/home/index.css">
+    <title>MMIV - GENERATIONAL GENOCIDE SINCE '94</title>
 </head>
 <body>
     <script src="/static/home/index.js"></script>
@@ -12,30 +13,24 @@
             <p class="button clickable" id="post-button">Post</p>
 
             <div class="nav-bar" style="margin-left: auto;">
-                {{if .IsAdmin}}
-                <p class="button clickable" onclick="">Admin</p>
-                {{end}}
                 <p class="button clickable" onclick="logout()">Logout</p>
-            </div>
-        </div>
-        <div style="display: none;">
-            <div class="accented clickable">
-                <p class="header">TEST HEADER</p>
-                <div class="post-content">
-                    <p class="text-content">TEST CONTENT</p>
-                </div>
             </div>
         </div>
         <div id="content">
         </div>
     </div>
-    <div class="accented post-submit" id="post-form">
+    <div class="resizable accented post-submit" style="display: none;" id="post-form">
         <div class="grab-bar" id="grabBar">Reply</div>
         <form class="post-form" enctype="multipart/form-data">
-            <textarea id="post-content" name="post-content" placeholder="Write your post..."></textarea>
+            <textarea id="post-content" name="post-content" placeholder=""></textarea>
             <input id="post-image" type="file" accept="image/*">
             <button type="submit">Submit</button>
         </form>
+    </div>
+    <div class="accented post-submit" style="display: none;" id="option-menu">
+        <p>delete post</p>
+        <p>pin post</p>
+        <p>etcetera</p>
     </div>
     <div class="footer">
         <p>(c) MMIV 2025 - FOREVER</p>

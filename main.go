@@ -12,8 +12,15 @@ func main() {
 	controller.OpenSQL()
 	defer controller.CloseSQL()
 
-	// todo: privatize this one as well
-	http.Handle("/static/img/", http.StripPrefix("/static/img/", http.FileServer(http.Dir("./static/img"))))
+	http.HandleFunc("/static/img/", func(w http.ResponseWriter, r *http.Request) {
+		if !controller.DoesUserMatchRank(r, "1") {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+
+		fs := http.FileServer(http.Dir("./static/img"))
+		http.StripPrefix("/static/img/", fs).ServeHTTP(w, r)
+	})
 
 	http.HandleFunc("/uploads/", func(w http.ResponseWriter, r *http.Request) {
 		if !controller.DoesUserMatchRank(r, "1") {

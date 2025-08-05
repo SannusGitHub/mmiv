@@ -18,6 +18,11 @@ import (
 
 	maybe it'll come in use eventually to have these both separated, a.la post-only or comment-only
 	feature but right now I highly doubt it
+
+	ALSO, there should probably be a check from the back-end to the front-end that cuts out anything the
+	"user" ( rank 1 ) shouldn't need vs "admin" ( rank 2 ) needs, to avoid unnecessary data being sent &
+	also to avoid people from snooping variables and potentially exploiting vulnerabilities because they
+	know what the back-end has
 */
 
 type PostData struct {

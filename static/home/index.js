@@ -241,12 +241,46 @@ function createPost(data, clickFunc) {
     postDiv.className = 'accented';
     postDiv.setAttribute('postId', data.id);
 
+    // header
+
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'header post-label';
+
     const titleP = document.createElement('p');
-    titleP.className = 'header';
     titleP.innerHTML = `#${data.id} <span class="highlight"><b>${data.username}</b></span> @ ${data.timestamp}`;
     if (data.commentcount !== undefined) {
         titleP.innerHTML += ` | R: ${data.commentcount}`
     };
+
+    headerDiv.append(titleP);
+
+    const headerRightDiv = document.createElement('div');
+    headerRightDiv.className = 'right';
+    
+    headerDiv.append(headerRightDiv);
+
+    const settingButton = document.createElement('p');
+    settingButton.innerText = "☰";
+    settingButton.className = 'clickable';
+    
+    headerRightDiv.append(settingButton);
+
+    const optionsMenu = document.getElementById("option-menu");
+    settingButton.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const rect = settingButton.getBoundingClientRect();
+
+        if (optionsMenu.style.display === "none") {
+            optionsMenu.style.display = "block";
+        } else {
+            optionsMenu.style.display = "none";
+        }
+
+        optionsMenu.style.top = `${rect.bottom + window.scrollY}px`;
+        optionsMenu.style.left = `${rect.left - optionsMenu.offsetWidth + settingButton.offsetWidth + window.scrollX}px`;
+    });
+
+    // content
 
     const postContentDiv = document.createElement('div');
     postContentDiv.className = "post-content";
@@ -276,7 +310,7 @@ function createPost(data, clickFunc) {
     contentP.textContent = data.postcontent;
     postContentDiv.appendChild(contentP);
 
-    postDiv.appendChild(titleP);
+    postDiv.appendChild(headerDiv);
     postDiv.appendChild(postContentDiv);
 
     const postsContainer = document.getElementById('content');
