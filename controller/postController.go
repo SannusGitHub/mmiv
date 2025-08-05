@@ -94,7 +94,7 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	postImagePath := QueryFromSQL(`SELECT imagepath FROM POSTS WHERE id = ?`, data.Id)
+	postImagePath := QueryFromSQL(`SELECT imagepath FROM posts WHERE id = ?`, data.Id)
 	if postImagePath != "" {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -236,6 +236,41 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"status": "success",
 	})
+}
+
+// untested
+func DeleteComment(w http.ResponseWriter, r *http.Request) {
+	if !DoesUserMatchRank(r, "2") {
+		fmt.Printf("Rank mismatch in RemoveComment, invalid perms!\n")
+		return
+	}
+
+	var data CommentData
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	commentImagePath := QueryFromSQL(`SELECT imagepath FROM comments WHERE id = ?`, data.Id)
+	if commentImagePath != "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
+		joinedImagePath := filepath.Join(cwd, commentImagePath)
+		fmt.Println(joinedImagePath)
+		err = os.Remove(joinedImagePath)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	WriteToSQL(`DELETE FROM comments WHERE id = ?`, data.Id)
+
+	fmt.Printf("Comment ID %s deleted successfully\n", data.Id)
 }
 
 func RequestComment(w http.ResponseWriter, r *http.Request) {
