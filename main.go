@@ -88,6 +88,10 @@ func main() {
 		controller.AddComment(w, r)
 	})
 
+	http.HandleFunc("/api/deleteComment", func(w http.ResponseWriter, r *http.Request) {
+		controller.DeleteComment(w, r)
+	})
+
 	http.HandleFunc("/api/requestComment", func(w http.ResponseWriter, r *http.Request) {
 		controller.RequestComment(w, r)
 	})
