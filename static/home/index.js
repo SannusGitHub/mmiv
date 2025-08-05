@@ -265,6 +265,7 @@ function createPost(data, clickFunc) {
     
     headerRightDiv.append(settingButton);
 
+    // TODO: account for resizing of window while menu is open
     const optionsMenu = document.getElementById("option-menu");
     settingButton.addEventListener('click', function(e) {
         e.stopPropagation();

@@ -3,40 +3,91 @@ package main
 import (
 	"fmt"
 	"html/template"
-	"log"
 	"mmiv/controller"
 	"net/http"
+	"os"
+	"strings"
 )
 
 func main() {
+	mux := http.NewServeMux()
+
 	controller.OpenSQL()
 	defer controller.CloseSQL()
 
-	http.HandleFunc("/static/img/", func(w http.ResponseWriter, r *http.Request) {
-		if !controller.DoesUserMatchRank(r, "1") {
-			http.Redirect(w, r, "/", http.StatusSeeOther)
+	/*
+		NOTE: FOR /IMG/ AND /UPLOADS/ IT'S CURRENTLY SET TO 1: THIS SHOULD BE
+		CHANGED SO THAT THE DIRECTORY ITSELF IS INACESSIBLE FOR VIEWING BUT
+		SUB-FILES ARE ALLOWED FOR VIEWING
+	*/
+
+	// img directory for handling on-platform images
+	mux.HandleFunc("/static/img/", func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path[len("/static/img/"):]
+		filePath := "./static/img/" + path
+
+		// give permission to every admin rank to view dir raw
+		if controller.DoesUserMatchRank(r, "2") {
+			http.ServeFile(w, r, filePath)
 			return
 		}
 
-		fs := http.FileServer(http.Dir("./static/img"))
-		http.StripPrefix("/static/img/", fs).ServeHTTP(w, r)
+		// ...however give every user the permission to view only the files themselves
+		if controller.DoesUserMatchRank(r, "1") {
+			if path == "" || strings.HasSuffix(r.URL.Path, "/") {
+				http.Redirect(w, r, "/404", http.StatusSeeOther)
+				return
+			}
+
+			info, err := os.Stat(filePath)
+			if err != nil || info.IsDir() {
+				http.Redirect(w, r, "/404", http.StatusSeeOther)
+				return
+			}
+
+			http.ServeFile(w, r, filePath)
+			return
+		}
+
+		http.Redirect(w, r, "/404", http.StatusSeeOther)
 	})
 
-	http.HandleFunc("/uploads/", func(w http.ResponseWriter, r *http.Request) {
-		if !controller.DoesUserMatchRank(r, "1") {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-			return
-		}
-
+	// uploads directory for handling on-platform uploads
+	mux.HandleFunc("/uploads/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path[len("/uploads/"):]
 		filePath := "./uploads/" + path
 
-		http.ServeFile(w, r, filePath)
+		// give permission to every admin rank to view dir raw
+		if controller.DoesUserMatchRank(r, "2") {
+			http.ServeFile(w, r, filePath)
+			return
+		}
+
+		// ...however give every user the permission to view only the files themselves
+		if controller.DoesUserMatchRank(r, "1") {
+			if path == "" || strings.HasSuffix(r.URL.Path, "/") {
+				http.Redirect(w, r, "/404", http.StatusSeeOther)
+				return
+			}
+
+			info, err := os.Stat(filePath)
+			if err != nil || info.IsDir() {
+				http.Redirect(w, r, "/404", http.StatusSeeOther)
+				return
+			}
+
+			http.ServeFile(w, r, filePath)
+			return
+		}
+
+		http.Redirect(w, r, "/404", http.StatusSeeOther)
 	})
 
-	http.Handle("/static/login/", http.StripPrefix("/static/login/", http.FileServer(http.Dir("./static/login"))))
+	// login directory for handling login front-end files
+	mux.Handle("/static/login/", http.StripPrefix("/static/login/", http.FileServer(http.Dir("./static/login"))))
 
-	http.HandleFunc("/static/home/", func(w http.ResponseWriter, r *http.Request) {
+	// home directory for handling access to main website stuff
+	mux.HandleFunc("/static/home/", func(w http.ResponseWriter, r *http.Request) {
 		if !controller.DoesUserMatchRank(r, "1") {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
@@ -46,8 +97,39 @@ func main() {
 		http.StripPrefix("/static/home/", fs).ServeHTTP(w, r)
 	})
 
+	// 404 directory for handling access to custom 404 page
+	mux.HandleFunc("/static/404/", func(w http.ResponseWriter, r *http.Request) {
+		if !controller.DoesUserMatchRank(r, "1") {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+
+		fs := http.FileServer(http.Dir("./static/404"))
+		http.StripPrefix("/static/404/", fs).ServeHTTP(w, r)
+	})
+
+	// 404 page serve function
+	mux.HandleFunc("/404", func(w http.ResponseWriter, r *http.Request) {
+		token := controller.GetCookie(r, "userSessionToken")
+		username := controller.GetUsernameFromCookie(r, "userSessionToken")
+
+		if token == nil || username == "" {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		http.ServeFile(w, r, "./static/404/404.html")
+	})
+
+	// home page serve section
 	tmpl := template.Must(template.ParseFiles("./static/home/index.html"))
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			r.URL.Path = "/404"
+			mux.ServeHTTP(w, r)
+			return
+		}
+
 		token := controller.GetCookie(r, "userSessionToken")
 		username := controller.GetUsernameFromCookie(r, "userSessionToken")
 		id := controller.QueryFromSQL("SELECT id FROM USERS WHERE username = ?", username)
@@ -67,52 +149,62 @@ func main() {
 		})
 	})
 
-	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+	// login page serve section
+	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./static/login/login.html")
 	})
 
-	http.HandleFunc("/api/login", func(w http.ResponseWriter, r *http.Request) {
+	// api calls
+	mux.HandleFunc("/api/login", func(w http.ResponseWriter, r *http.Request) {
 		controller.Login(w, r)
 	})
 
-	http.HandleFunc("/api/logout", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/logout", func(w http.ResponseWriter, r *http.Request) {
 		controller.Logout(w, r)
 	})
 
-	http.HandleFunc("/api/addPost", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/addPost", func(w http.ResponseWriter, r *http.Request) {
 		controller.AddPost(w, r)
 	})
 
-	http.HandleFunc("/api/deletePost", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/deletePost", func(w http.ResponseWriter, r *http.Request) {
 		controller.DeletePost(w, r)
 	})
 
-	http.HandleFunc("/api/requestPost", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/requestPost", func(w http.ResponseWriter, r *http.Request) {
 		controller.RequestPost(w, r)
 	})
 
-	http.HandleFunc("/api/addComment", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/addComment", func(w http.ResponseWriter, r *http.Request) {
 		controller.AddComment(w, r)
 	})
 
-	http.HandleFunc("/api/deleteComment", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/deleteComment", func(w http.ResponseWriter, r *http.Request) {
 		controller.DeleteComment(w, r)
 	})
 
-	http.HandleFunc("/api/requestComment", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/requestComment", func(w http.ResponseWriter, r *http.Request) {
 		controller.RequestComment(w, r)
 	})
 
-	http.HandleFunc("/api/addUser", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/addUser", func(w http.ResponseWriter, r *http.Request) {
 		controller.AddUser(w, r)
 	})
 
-	http.HandleFunc("/api/deleteUser", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/deleteUser", func(w http.ResponseWriter, r *http.Request) {
 		controller.DeleteUser(w, r)
 	})
 
+	// run server
 	fmt.Println("running on http://localhost:1759/")
-	if err := http.ListenAndServe("localhost:1759", nil); err != nil {
-		log.Fatal(err)
-	}
+	http.ListenAndServe("localhost:1759", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, pattern := mux.Handler(r)
+		if pattern == "" {
+			fmt.Println("pattern empty")
+			r.URL.Path = "/404"
+			mux.ServeHTTP(w, r)
+			return
+		}
+		mux.ServeHTTP(w, r)
+	}))
 }
