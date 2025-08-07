@@ -40,6 +40,7 @@ class Post {
 
         postDiv.setAttribute("pinned", this.pinned);
         if (this.pinned !== undefined && this.pinned == true) {
+            postDiv.setAttribute("pinned", this.pinned)
             headerTitleP.innerHTML += ` | pinned`
         };
 
