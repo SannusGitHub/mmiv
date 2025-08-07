@@ -8,11 +8,11 @@
             <img class="main-img" src="/static/img/mmiv_1.png">
         </div>
         <div class="nav-bar header accented">
-            <p class="button clickable" onclick="fetchPosts()">Return</p>
+            <p class="button clickable" id="return-button">Return</p>
             <p class="button clickable" id="post-button">Post</p>
 
             <div class="nav-bar" style="margin-left: auto;">
-                <p class="button clickable" onclick="logout()">Logout</p>
+                <p class="button clickable" id="logout-button">Logout</p>
             </div>
         </div>
         <div id="content">
@@ -30,7 +30,7 @@
         <p>example 1</p>
         <p>example 2</p>
         {{if .IsAdmin}}
-        <p class="clickable">pin post</p>
+        <p class="clickable" id="pin-post-button">pin post</p>
         {{end}}
     </div>
     <div class="footer">
@@ -38,8 +38,8 @@
         <p>generation genocide since 1994</p>
     </div>
 
-    <script src="/static/home/index.js"></script>
+    <script type="module" src="/static/home/index.mjs"></script>
     {{if .IsAdmin}}
-    <script src="/static/private/admin.js"></script>
+    <script type="module" src="/static/private/admin.mjs"></script>
     {{end}}
 </body>

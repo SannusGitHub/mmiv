@@ -1,4 +1,4 @@
-let currentPosts = new Map;
+export let currentPosts = new Map;
 
 class Post {
     constructor({
@@ -29,13 +29,16 @@ class Post {
 
         const settingButtonP = document.createElement('p');
         settingButtonP.innerText = "☰";
-        settingButtonP.className = 'clickable';
+        settingButtonP.className = 'clickable option-button';
+        settingButtonP.setAttribute("data-post-id", this.id);
 
         const headerTitleP = document.createElement('p');
         headerTitleP.innerHTML = `#${this.id} <span class="highlight"><b>${this.username}</b></span> @ ${this.timestamp}`;
         if (this.commentcount !== undefined) {
             headerTitleP.innerHTML += ` | R: ${this.commentcount}`
         };
+
+        postDiv.setAttribute("pinned", this.pinned);
         if (this.pinned !== undefined && this.pinned == true) {
             headerTitleP.innerHTML += ` | pinned`
         };
@@ -43,6 +46,8 @@ class Post {
         const optionsMenu = document.getElementById("option-menu");
         settingButtonP.addEventListener('click', function(e) {
             e.stopPropagation();
+
+            optionsMenu.setAttribute("attached-to-id", this.getAttribute('data-post-id'));
             const rect = settingButtonP.getBoundingClientRect();
 
             if (optionsMenu.style.display === "none") {
@@ -121,7 +126,7 @@ function loadPosts() {
     });
 };
 
-function fetchPosts() {
+export function fetchPosts() {
     setupDraggableForm({
         grabBarLabelText: 'New Post',
         formButtonLabelText: 'Post',
@@ -225,6 +230,9 @@ function fetchComments(postParent) {
         }
     });
     
+    const optionsMenu = document.getElementById('option-menu');
+    optionsMenu.style.display = "none";
+
     fetch('/api/requestComment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -265,37 +273,29 @@ function fetchComments(postParent) {
     });
 };
 
-function logout() {
-    /*
-    fetchFunction(
-        "/api/logout", 
-        'POST', 
-        { 'Content-Type': 'application/json' }, 
-        {},
-        (response) => response.json(),
-        (data) => {
-            window.location.href = "/login";
-        },
-        (error) => {
-            console.error("Logout failed:", error);
-            alert("Logout failed.");
-        }
-    );
-    */
+function returnButton() {
+    document.getElementById('return-button').addEventListener('click', function() {
+        const optionsMenu = document.getElementById('option-menu');
+        optionsMenu.style.display = "none";
 
-    fetch('/api/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-    }).then(response => {
-        if (!response.ok) {
-            throw new Error("Failed");
-        };
-        
-        return response.json();
-    }).then(data => {
-        window.location.href = "/login";
-    }).catch(error => {
-        console.error("Error:", error);
+        fetchPosts();
+    });
+}
+
+function logoutButton() {
+    document.getElementById('logout-button').addEventListener('click', function() {
+        fetch('/api/logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error("Failed");
+            };
+            
+            return response.json();
+        }).then(() => {
+            window.location.href = "/login";
+        });
     });
 };
 
@@ -353,4 +353,8 @@ function setupDraggableForm({
     };
 };
 
-fetchPosts();
+document.addEventListener("DOMContentLoaded", (event) => {
+    returnButton();
+    logoutButton();
+    fetchPosts();
+});

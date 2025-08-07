@@ -174,6 +174,11 @@ func PinPost(w http.ResponseWriter, r *http.Request) {
 	WriteToSQL(`UPDATE posts SET pinned = ? WHERE id = ?`, data.Pinned, data.Id)
 
 	fmt.Printf("Post of ID %s has been pinned: %t\n", data.Id, data.Pinned)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "success",
+	})
 }
 
 type CommentData struct {
