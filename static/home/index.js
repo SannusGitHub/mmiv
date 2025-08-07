@@ -122,6 +122,38 @@ function loadPosts() {
 };
 
 function fetchPosts() {
+    setupDraggableForm({
+        grabBarLabelText: 'New Post',
+        formButtonLabelText: 'Post',
+        onSubmitForm: function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById("post-image");
+            const textInput = document.getElementById("post-content");
+
+            const formData = new FormData();
+            formData.append("postcontent", textInput.value);
+            formData.append("image", fileInput.files[0]);
+
+            fetch('/api/addPost', {
+                method: "POST",
+                body: formData,
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error("Upload failed");
+                }
+                return response.json();
+            }).then(data => {
+                console.log("Success:", data);
+
+                fetchPosts();
+                fileInput.value = null;
+            }).catch(error => {
+                console.error("Error:", error);
+            });
+        }
+    });
+
     fetch('/api/requestPost', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -159,6 +191,40 @@ function fetchPosts() {
 };
 
 function fetchComments(postParent) {
+    setupDraggableForm({
+        grabBarLabelText: 'Add Comment',
+        formButtonLabelText: 'Comment',
+        onSubmitForm: function(e) {
+            e.preventDefault();
+
+            const fileInput = document.getElementById("post-image");
+            const textInput = document.getElementById("post-content");
+            const parentpostID = postParent.id;
+            
+            const formData = new FormData();
+            formData.append("postcontent", textInput.value);
+            formData.append("image", fileInput.files[0]);
+            formData.append("parentpostid", parentpostID);
+
+            fetch('/api/addComment', {
+                method: "POST",
+                body: formData,
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error("Upload failed");
+                }
+                return response.json();
+            }).then(data => {
+                console.log("Success:", data);
+
+                fetchComments(postParent);
+                fileInput.value = null;
+            }).catch(error => {
+                console.error("Error:", error);
+            });
+        }
+    });
+    
     fetch('/api/requestComment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -197,6 +263,60 @@ function fetchComments(postParent) {
     }).catch(error => {
         console.error("Error:", error);
     });
+};
+
+function setupDraggableForm({
+    grabBarLabelText = null,
+    formButtonLabelText = null,
+    onSubmitForm
+}) {
+    const form = document.getElementById("post-form");
+    const grabBar = document.getElementById("grabBar");
+    const fileInput = document.getElementById("post-image");
+    const textInput = document.getElementById("post-content");
+    fileInput.value = null;
+    textInput.value = "";
+
+    if (grabBarLabelText !== null) {
+        grabBar.textContent = grabBarLabelText;
+    }
+
+    let offsetX = 0, offsetY = 0, isDragging = false;
+
+    grabBar.onmousedown = (e) => {
+        isDragging = true;
+        const rect = form.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+        document.body.style.userSelect = 'none';
+    };
+
+    document.onmousemove = (e) => {
+        if (isDragging) {
+            form.style.left = `${e.clientX - offsetX}px`;
+            form.style.top = `${e.clientY - offsetY}px`;
+        }
+    };
+
+    document.onmouseup = () => {
+        isDragging = false;
+        document.body.style.userSelect = '';
+    };
+
+    // handle post button
+    const postButton = document.getElementById("post-button");
+    postButton.innerText = formButtonLabelText;
+    postButton.onmousedown = (e) => {
+        if (form.style.display === "none") {
+            form.style.display = "block";
+        } else {
+            form.style.display = "none";
+        }
+    };
+
+    form.onsubmit = (e) => {
+        onSubmitForm(e);
+    };
 };
 
 fetchPosts();
