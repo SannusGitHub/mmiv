@@ -24,6 +24,13 @@ class Post {
         const headerDiv = document.createElement('div');
         headerDiv.className = 'header post-label';
 
+        const headerRightDiv = document.createElement('div');
+        headerRightDiv.className = 'right';
+
+        const settingButtonP = document.createElement('p');
+        settingButtonP.innerText = "☰";
+        settingButtonP.className = 'clickable';
+
         const headerTitleP = document.createElement('p');
         headerTitleP.innerHTML = `#${this.id} <span class="highlight"><b>${this.username}</b></span> @ ${this.timestamp}`;
         if (this.commentcount !== undefined) {
@@ -32,6 +39,21 @@ class Post {
         if (this.pinned !== undefined && this.pinned == true) {
             headerTitleP.innerHTML += ` | pinned`
         };
+
+        const optionsMenu = document.getElementById("option-menu");
+        settingButtonP.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const rect = settingButtonP.getBoundingClientRect();
+
+            if (optionsMenu.style.display === "none") {
+                optionsMenu.style.display = "block";
+            } else {
+                optionsMenu.style.display = "none";
+            };
+
+            optionsMenu.style.top = `${rect.bottom + window.scrollY}px`;
+            optionsMenu.style.left = `${rect.left - optionsMenu.offsetWidth + settingButtonP.offsetWidth + window.scrollX}px`;
+        });
 
         // content
 
@@ -51,13 +73,13 @@ class Post {
             contentImg.addEventListener('click', function(e) {
                 e.stopPropagation();
                 
-                if (contentImg.style.width === "auto" && contentImg.style.display === "block") {
+                if (contentImg.style.width === contentImg.naturalWidth + "px") {
                     contentImg.style.width = "150px";
-                    contentImg.style.display = "flex";
+                    postContentDiv.style.flexDirection = "row";
                 } else {
-                    contentImg.style.width = "auto";
-                    contentImg.style.display = "block";
-                }
+                    contentImg.style.width = contentImg.naturalWidth + "px";
+                    postContentDiv.style.flexDirection = "column";
+                };
             });
         };
 
@@ -67,6 +89,9 @@ class Post {
         postDiv.appendChild(postContentDiv);
 
         headerDiv.appendChild(headerTitleP);
+        headerDiv.append(headerRightDiv);
+
+        headerRightDiv.appendChild(settingButtonP);
 
         if (contentImg !== null) {
             postContentDiv.appendChild(contentImg);

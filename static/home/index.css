@@ -120,10 +120,10 @@ p.button:hover {
 
 .post-content {
     display: flex;
-    align-items: center;
     padding: 0.5em;
     overflow: hidden;
     flex-grow: 1;
+    flex-wrap: wrap;
     max-height: 100%;
     gap: 0.5em;
 }
