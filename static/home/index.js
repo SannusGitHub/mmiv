@@ -1,353 +1,177 @@
-/*
-    LIST OF THINGS TO CURRENTLY DO / BUGS PRESENT:
-    * rewrite the comments into supporting new multi-part form system & images (X)
-        front-end (X) and back-end (X)
-    * fix autorequesting new posts whenever a post / comment is submitted (X)
-    * general clean-up (man what the fuck is this mess)
-*/
-function fetchFunction(
-    apiUrl, 
-    method = 'POST',
-    headers = { 'Content-Type': 'application/json' },
-    data = {},
-    responseFunc = (response) => response.json(),
-    runFunc = (data) => {},
-    catchFunc = (error) => {}
-) {
-    fetch(apiUrl, {
-        method: method,
-        headers: headers,
-        body: method !== 'GET' ? JSON.stringify(data) : undefined
-    })
-    .then(response => {
-        if (!response.ok) throw new Error("Network response was not ok");
-        return responseFunc(response);
-    })
-    .then(data => runFunc(data))
-    .catch(error => catchFunc(error));
-};
+let currentPosts = new Map;
 
-function logout() {
-    fetchFunction(
-        "/api/logout", 
-        'POST', 
-        { 'Content-Type': 'application/json' }, 
-        {},
-        (response) => response.json(),
-        (data) => {
-            window.location.href = "/login";
-        },
-        (error) => {
-            console.error("Logout failed:", error);
-            alert("Logout failed.");
-        }
-    );
-};
+class Post {
+    constructor({
+        id, username, postcontent, imagepath, commentcount, timestamp, pinned, clickFunc
+    } = {}) {
+        this.id = id;
+        this.username = username;
+        this.postcontent = postcontent;
+        this.commentcount = commentcount;
+        this.imagepath = imagepath;
+        this.timestamp = timestamp;
+        this.pinned = pinned;
+        this.clickFunc = clickFunc;
+    };
 
-function requestPosts() {
-    setupDraggableForm({
-        grabBarLabelText: 'New Post',
-        formButtonLabelText: 'Post',
-        onSubmitForm: function(e) {
-            e.preventDefault();
-            
-            const fileInput = document.getElementById("post-image");
-            const textInput = document.getElementById("post-content");
+    createElements() {
+        const postDiv = document.createElement('div');
+        postDiv.className = 'accented';
+        postDiv.setAttribute('postId', this.id);
 
-            const formData = new FormData();
-            formData.append("postcontent", textInput.value);
-            formData.append("image", fileInput.files[0]);
+        // header
 
-            fetch('/api/addPost', {
-                method: "POST",
-                body: formData,
-            }).then(response => {
-                if (!response.ok) {
-                    throw new Error("Upload failed");
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'header post-label';
+
+        const headerTitleP = document.createElement('p');
+        headerTitleP.innerHTML = `#${this.id} <span class="highlight"><b>${this.username}</b></span> @ ${this.timestamp}`;
+        if (this.commentcount !== undefined) {
+            headerTitleP.innerHTML += ` | R: ${this.commentcount}`
+        };
+        if (this.pinned !== undefined && this.pinned == true) {
+            headerTitleP.innerHTML += ` | pinned`
+        };
+
+        // content
+
+        const postContentDiv = document.createElement('div');
+        postContentDiv.className = "post-content";
+
+        const contentP = document.createElement('p');
+        contentP.className = 'text-content';
+        contentP.textContent = this.postcontent;
+
+        let contentImg = null;
+        if (this.imagepath !== null && this.imagepath !== "") {
+            contentImg = document.createElement('img');
+            contentImg.src = this.imagepath;
+            contentImg.classList = 'image-content clickable';
+
+            contentImg.addEventListener('click', function(e) {
+                e.stopPropagation();
+                
+                if (contentImg.style.width === "auto" && contentImg.style.display === "block") {
+                    contentImg.style.width = "150px";
+                    contentImg.style.display = "flex";
+                } else {
+                    contentImg.style.width = "auto";
+                    contentImg.style.display = "block";
                 }
-                return response.json();
-            }).then(data => {
-                console.log("Success:", data);
+            });
+        };
 
-                requestPosts();
-                fileInput.value = null;
-            }).catch(error => {
-                console.error("Error:", error);
+        // append
+
+        postDiv.appendChild(headerDiv);
+        postDiv.appendChild(postContentDiv);
+
+        headerDiv.appendChild(headerTitleP);
+
+        if (contentImg !== null) {
+            postContentDiv.appendChild(contentImg);
+        };
+        postContentDiv.appendChild(contentP);
+
+        // interact
+
+        if (typeof this.clickFunc === 'function') {
+            postDiv.classList.add("clickable");
+            postDiv.addEventListener('click', () => {
+                this.clickFunc();
             });
         }
-    });
 
-    fetchFunction(
-        "/api/requestPost", 
-        'POST', 
-        { 'Content-Type': 'application/json' },
-        {},
-        (response) => response.json(),
-        (data) => {
-            const postsContainer = document.getElementById('content');
-            postsContainer.innerHTML = "";
-
-            data.forEach((element) => {
-                createPost(
-                    element,
-                    function() {
-                        requestComments(element);
-                    }
-                );
-            });
-        },
-        (error) => {
-            console.error("Error fetching post:", error);
-        }
-    );
+        return postDiv;
+    };
 };
 
-function requestComments(parentpost) {
-    setupDraggableForm({
-        grabBarLabelText: 'Add Comment',
-        formButtonLabelText: 'Comment',
-        onSubmitForm: function(e) {
-            e.preventDefault();
+function loadPosts() {
+    const content = document.getElementById('content');
+    content.innerHTML = "";
 
-            const fileInput = document.getElementById("post-image");
-            const textInput = document.getElementById("post-content");
-            const parentpostID = parentpost.id;
-            
-            const formData = new FormData();
-            formData.append("postcontent", textInput.value);
-            formData.append("image", fileInput.files[0]);
-            formData.append("parentpostid", parentpostID)
+    currentPosts.forEach((element) => {
+        const div = element.createElements();
+        content.appendChild(div);
+    });
+};
 
-            fetch('/api/addComment', {
-                method: "POST",
-                body: formData,
-            }).then(response => {
-                if (!response.ok) {
-                    throw new Error("Upload failed");
+function fetchPosts() {
+    fetch('/api/requestPost', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error("Failed");
+        };
+        
+        return response.json();
+    }).then(data => {
+        console.log("Success:", data);
+        
+        currentPosts.clear();
+        data.forEach((element) => {
+            const newPost = new Post({
+                id: element.id,
+                username: element.username,
+                postcontent: element.postcontent,
+                imagepath: element.imagepath,
+                commentcount: element.commentcount,
+                timestamp: element.timestamp,
+                pinned: element.pinned,
+                clickFunc: function() {
+                    fetchComments(element);
                 }
-                return response.json();
-            }).then(data => {
-                console.log("Success:", data);
-
-                requestComments(parentpost);
-                fileInput.files[0].value = null;
-            }).catch(error => {
-                console.error("Error:", error);
             });
-        }
+
+            currentPosts.set(newPost.id, newPost);
+        });
+
+        loadPosts();
+    }).catch(error => {
+        console.error("Error:", error);
     });
+};
 
-    const postsContainer = document.getElementById('content');
-    postsContainer.innerHTML = "";
+function fetchComments(postParent) {
+    fetch('/api/requestComment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            parentpostid: postParent.id
+        })
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error("Failed");
+        };
+        
+        return response.json();
+    }).then(data => {
+        console.log("Success:", data);
+        currentPosts.clear();
 
-    createPost(parentpost);
-    // console.log(parentpostid);
-
-    fetchFunction(
-        "/api/requestComment", 
-        'POST', 
-        { 'Content-Type': 'application/json' },
-        {
-            parentpostid: parentpost.id,
-        },
-        (response) => response.json(),
-        (data) => {
+        const parentPost = new Post(postParent);
+        currentPosts.set(parentPost.id, parentPost);
+        if (Array.isArray(data)) {
             data.forEach((element) => {
-                createPost(element);
+                const newPost = new Post({
+                    id: element.id,
+                    username: element.username,
+                    postcontent: element.postcontent,
+                    imagepath: element.imagepath,
+                    commentcount: element.commentcount,
+                    timestamp: element.timestamp,
+                    pinned: element.pinned
+                });
+
+                currentPosts.set(newPost.id, newPost);
             });
-        },
-        (error) => {
-            console.error("Error fetching post:", error);
-        }
-    );
-};
+        };
 
-function setupDraggableForm({
-    grabBarLabelText = null,
-    formButtonLabelText = null,
-    onSubmitForm
-}) {
-    const form = document.getElementById("post-form");
-    const grabBar = document.getElementById("grabBar");
-    const fileInput = document.getElementById("post-image");
-    const textInput = document.getElementById("post-content");
-    fileInput.value = null;
-    textInput.value = "";
-
-    if (grabBarLabelText !== null) {
-        grabBar.textContent = grabBarLabelText;
-    }
-
-    let offsetX = 0, offsetY = 0, isDragging = false;
-
-    grabBar.onmousedown = (e) => {
-        isDragging = true;
-        const rect = form.getBoundingClientRect();
-        offsetX = e.clientX - rect.left;
-        offsetY = e.clientY - rect.top;
-        document.body.style.userSelect = 'none';
-    };
-
-    document.onmousemove = (e) => {
-        if (isDragging) {
-            form.style.left = `${e.clientX - offsetX}px`;
-            form.style.top = `${e.clientY - offsetY}px`;
-        }
-    };
-
-    document.onmouseup = () => {
-        isDragging = false;
-        document.body.style.userSelect = '';
-    };
-
-    // handle post button
-    const postButton = document.getElementById("post-button");
-    postButton.innerText = formButtonLabelText;
-    postButton.onmousedown = (e) => {
-        if (form.style.display === "none") {
-            form.style.display = "block";
-        } else {
-            form.style.display = "none";
-        }
-    };
-
-    form.onsubmit = (e) => {
-        onSubmitForm(e);
-    };
-}
-
-/*
-COMMENT FETCH
-
-fetchFunction(
-            "/api/addPost", 
-            'POST', 
-            { 'Content-Type': 'application/json' }, 
-            {
-                postcontent: postcontent
-            },
-            (response) => response.json(),
-            (data) => {
-                document.getElementById("comment-content").value = "";
-                // requestComments();
-            }
-        );
-
-*/
-
-// id, timestamp, user, content
-function createPost(data, clickFunc) {
-    const postDiv = document.createElement('div');
-    postDiv.className = 'accented';
-    postDiv.setAttribute('postId', data.id);
-
-    // header
-
-    const headerDiv = document.createElement('div');
-    headerDiv.className = 'header post-label';
-
-    const titleP = document.createElement('p');
-    titleP.innerHTML = `#${data.id} <span class="highlight"><b>${data.username}</b></span> @ ${data.timestamp}`;
-    if (data.commentcount !== undefined) {
-        titleP.innerHTML += ` | R: ${data.commentcount}`
-    };
-
-    headerDiv.append(titleP);
-
-    const headerRightDiv = document.createElement('div');
-    headerRightDiv.className = 'right';
-    
-    headerDiv.append(headerRightDiv);
-
-    const settingButton = document.createElement('p');
-    settingButton.innerText = "☰";
-    settingButton.className = 'clickable';
-    
-    headerRightDiv.append(settingButton);
-
-    // TODO: account for resizing of window while menu is open
-    const optionsMenu = document.getElementById("option-menu");
-    settingButton.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const rect = settingButton.getBoundingClientRect();
-
-        if (optionsMenu.style.display === "none") {
-            optionsMenu.style.display = "block";
-        } else {
-            optionsMenu.style.display = "none";
-        }
-
-        optionsMenu.style.top = `${rect.bottom + window.scrollY}px`;
-        optionsMenu.style.left = `${rect.left - optionsMenu.offsetWidth + settingButton.offsetWidth + window.scrollX}px`;
+        loadPosts();
+    }).catch(error => {
+        console.error("Error:", error);
     });
-
-    // content
-
-    const postContentDiv = document.createElement('div');
-    postContentDiv.className = "post-content";
-
-    if (data.imagepath !== null && data.imagepath !== "") {
-        const postImg = document.createElement('img');
-        postImg.src = data.imagepath;
-        postImg.classList = 'image-content clickable';
-
-        postContentDiv.appendChild(postImg);
-
-        postImg.addEventListener('click', function(e) {
-            e.stopPropagation();
-            
-            if (postImg.style.width === "auto" && postContentDiv.style.display === "block") {
-                postImg.style.width = "150px";
-                postContentDiv.style.display = "flex";
-            } else {
-                postImg.style.width = "auto";
-                postContentDiv.style.display = "block";
-            }
-        });
-    };
-
-    const contentP = document.createElement('p');
-    contentP.className = 'text-content';
-    contentP.textContent = data.postcontent;
-    postContentDiv.appendChild(contentP);
-
-    postDiv.appendChild(headerDiv);
-    postDiv.appendChild(postContentDiv);
-
-    const postsContainer = document.getElementById('content');
-    postsContainer.appendChild(postDiv);
-
-    if (typeof clickFunc === 'function') {
-        postDiv.classList.add("clickable");
-        postDiv.addEventListener('click', function() {
-            clickFunc();
-        });
-    }
 };
 
-document.addEventListener("DOMContentLoaded", function() { 
-    requestPosts();
-});
-
-/*
-fetch('/api/deletePost', {
-    method: "POST",
-    header: new Headers({
-        "Content-Type": "application/json",
-    }),
-    body: JSON.stringify({
-        id: "13"
-    })
-}).then(response => {
-    if (!response.ok) {
-        throw new Error("Failed");
-    }
-    return response.json();
-}).then(data => {
-    console.log("Success:", data);
-
-    requestPosts();
-}).catch(error => {
-    console.error("Error:", error);
-});
-*/
+fetchPosts();

@@ -32,6 +32,7 @@ type PostData struct {
 	Imagepath    string `json:"imagepath"`
 	Timestamp    string `json:"timestamp"`
 	CommentCount string `json:"commentcount"`
+	Pinned       bool   `json:"pinned"`
 }
 
 func AddPost(w http.ResponseWriter, r *http.Request) {
@@ -75,11 +76,12 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	postContent := r.FormValue("postcontent")
+	pinned := false
 
 	WriteToSQL(`
-		INSERT INTO POSTS (id, username, postcontent, imagepath)
-		VALUES (?, ?, ?, ?)
-	`, id, currentUsername, postContent, imagePath)
+		INSERT INTO POSTS (id, username, postcontent, imagepath, pinned)
+		VALUES (?, ?, ?, ?, ?)
+	`, id, currentUsername, postContent, imagePath, pinned)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
@@ -127,7 +129,7 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := `SELECT id, username, postcontent, imagepath, timestamp FROM POSTS ORDER BY id DESC`
+	query := `SELECT id, username, postcontent, imagepath, timestamp, pinned FROM POSTS ORDER BY pinned DESC, id DESC`
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Fatal(err)
@@ -138,7 +140,7 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 
 	for rows.Next() {
 		var post PostData
-		err := rows.Scan(&post.Id, &post.Username, &post.PostContent, &post.Imagepath, &post.Timestamp)
+		err := rows.Scan(&post.Id, &post.Username, &post.PostContent, &post.Imagepath, &post.Timestamp, &post.Pinned)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -155,6 +157,23 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(posts)
+}
+
+func PinPost(w http.ResponseWriter, r *http.Request) {
+	if !DoesUserMatchRank(r, "2") {
+		fmt.Printf("Rank mismatch in RequestPost, invalid perms!\n")
+		return
+	}
+
+	var data PostData
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	WriteToSQL(`UPDATE posts SET pinned = ? WHERE id = ?`, data.Pinned, data.Id)
+
+	fmt.Printf("Post of ID %s has been pinned: %t\n", data.Id, data.Pinned)
 }
 
 type CommentData struct {

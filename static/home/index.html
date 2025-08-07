@@ -3,13 +3,12 @@
     <title>MMIV - GENERATIONAL GENOCIDE SINCE '94</title>
 </head>
 <body>
-    <script src="/static/home/index.js"></script>
     <div class="main">
         <div class="nav-bar">
             <img class="main-img" src="/static/img/mmiv_1.png">
         </div>
         <div class="nav-bar header accented">
-            <p class="button clickable" onclick="requestPosts()">Return</p>
+            <p class="button clickable" onclick="fetchPosts()">Return</p>
             <p class="button clickable" id="post-button">Post</p>
 
             <div class="nav-bar" style="margin-left: auto;">
@@ -28,12 +27,19 @@
         </form>
     </div>
     <div class="accented post-submit" style="display: none;" id="option-menu">
-        <p>delete post</p>
-        <p>pin post</p>
-        <p>etcetera</p>
+        <p>example 1</p>
+        <p>example 2</p>
+        {{if .IsAdmin}}
+        <p class="button clickable">pin post</p>
+        {{end}}
     </div>
     <div class="footer">
         <p>(c) MMIV 2025 - FOREVER</p>
         <p>generation genocide since 1994</p>
     </div>
+
+    <script src="/static/home/index.js"></script>
+    {{if .IsAdmin}}
+    <script src="/static/private/admin.js"></script>
+    {{end}}
 </body>

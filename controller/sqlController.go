@@ -22,7 +22,8 @@ func OpenSQL() {
 		username TEXT NOT NULL,
 		postcontent TEXT NOT NULL,
 		imagepath TEXT NOT NULL,
-		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+		pinned INTEGER NOT NULL DEFAULT 0
 	)`)
 
 	WriteToSQL(`
@@ -47,6 +48,8 @@ func OpenSQL() {
 		CREATE TABLE IF NOT EXISTS global_ids (
 		id INTEGER PRIMARY KEY AUTOINCREMENT
 	)`)
+
+	// WriteToSQL(`ALTER TABLE posts ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0`)
 
 	if err = db.Ping(); err != nil {
 		log.Fatal("Cannot connect to database:", err)

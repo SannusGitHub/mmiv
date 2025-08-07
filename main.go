@@ -15,12 +15,6 @@ func main() {
 	controller.OpenSQL()
 	defer controller.CloseSQL()
 
-	/*
-		NOTE: FOR /IMG/ AND /UPLOADS/ IT'S CURRENTLY SET TO 1: THIS SHOULD BE
-		CHANGED SO THAT THE DIRECTORY ITSELF IS INACESSIBLE FOR VIEWING BUT
-		SUB-FILES ARE ALLOWED FOR VIEWING
-	*/
-
 	// img directory for handling on-platform images
 	mux.HandleFunc("/static/img/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path[len("/static/img/"):]
@@ -95,6 +89,17 @@ func main() {
 
 		fs := http.FileServer(http.Dir("./static/home"))
 		http.StripPrefix("/static/home/", fs).ServeHTTP(w, r)
+	})
+
+	// private directory for handling access to stuff the average user / stranger shouldn't prolly accewss
+	mux.HandleFunc("/static/private/", func(w http.ResponseWriter, r *http.Request) {
+		if !controller.DoesUserMatchRank(r, "2") {
+			http.Redirect(w, r, "/404", http.StatusSeeOther)
+			return
+		}
+
+		fs := http.FileServer(http.Dir("./static/private"))
+		http.StripPrefix("/static/private/", fs).ServeHTTP(w, r)
 	})
 
 	// 404 directory for handling access to custom 404 page
@@ -175,6 +180,10 @@ func main() {
 		controller.RequestPost(w, r)
 	})
 
+	mux.HandleFunc("/api/pinPost", func(w http.ResponseWriter, r *http.Request) {
+		controller.PinPost(w, r)
+	})
+
 	mux.HandleFunc("/api/addComment", func(w http.ResponseWriter, r *http.Request) {
 		controller.AddComment(w, r)
 	})
@@ -200,7 +209,6 @@ func main() {
 	http.ListenAndServe("localhost:1759", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, pattern := mux.Handler(r)
 		if pattern == "" {
-			fmt.Println("pattern empty")
 			r.URL.Path = "/404"
 			mux.ServeHTTP(w, r)
 			return
