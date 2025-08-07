@@ -265,6 +265,40 @@ function fetchComments(postParent) {
     });
 };
 
+function logout() {
+    /*
+    fetchFunction(
+        "/api/logout", 
+        'POST', 
+        { 'Content-Type': 'application/json' }, 
+        {},
+        (response) => response.json(),
+        (data) => {
+            window.location.href = "/login";
+        },
+        (error) => {
+            console.error("Logout failed:", error);
+            alert("Logout failed.");
+        }
+    );
+    */
+
+    fetch('/api/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error("Failed");
+        };
+        
+        return response.json();
+    }).then(data => {
+        window.location.href = "/login";
+    }).catch(error => {
+        console.error("Error:", error);
+    });
+};
+
 function setupDraggableForm({
     grabBarLabelText = null,
     formButtonLabelText = null,
