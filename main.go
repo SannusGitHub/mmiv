@@ -184,6 +184,10 @@ func main() {
 		controller.PinPost(w, r)
 	})
 
+	mux.HandleFunc("/api/lockPost", func(w http.ResponseWriter, r *http.Request) {
+		controller.LockPost(w, r)
+	})
+
 	mux.HandleFunc("/api/addComment", func(w http.ResponseWriter, r *http.Request) {
 		controller.AddComment(w, r)
 	})

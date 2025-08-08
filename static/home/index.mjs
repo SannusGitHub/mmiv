@@ -2,7 +2,7 @@ export let currentPosts = new Map;
 
 class Post {
     constructor({
-        id, username, postcontent, imagepath, commentcount, timestamp, pinned, clickFunc
+        id, username, postcontent, imagepath, commentcount, timestamp, pinned, locked, clickFunc
     } = {}) {
         this.id = id;
         this.username = username;
@@ -11,6 +11,7 @@ class Post {
         this.imagepath = imagepath;
         this.timestamp = timestamp;
         this.pinned = pinned;
+        this.locked = locked;
         this.clickFunc = clickFunc;
     };
 
@@ -35,13 +36,19 @@ class Post {
         const headerTitleP = document.createElement('p');
         headerTitleP.innerHTML = `#${this.id} <span class="highlight"><b>${this.username}</b></span> @ ${this.timestamp}`;
         if (this.commentcount !== undefined) {
-            headerTitleP.innerHTML += ` | R: ${this.commentcount}`
+            headerTitleP.innerHTML += ` | R: ${this.commentcount} `
         };
 
         postDiv.setAttribute("pinned", this.pinned);
         if (this.pinned !== undefined && this.pinned == true) {
             postDiv.setAttribute("pinned", this.pinned)
-            headerTitleP.innerHTML += ` | pinned`
+            headerTitleP.innerHTML += `<img src="/static/img/sticky.png" alt="P" class="emoticon"> `
+        };
+
+        console.log(this.locked);
+        if (this.locked !== undefined && this.locked == true) {
+            postDiv.setAttribute("locked", this.locked);
+            headerTitleP.innerHTML += `<img src="/static/img/lock.png" alt="L" class="emoticon"> `
         };
 
         const optionsMenu = document.getElementById("option-menu");
@@ -182,6 +189,7 @@ export function fetchPosts() {
                 commentcount: element.commentcount,
                 timestamp: element.timestamp,
                 pinned: element.pinned,
+                locked: element.locked,
                 clickFunc: function() {
                     fetchComments(element);
                 }

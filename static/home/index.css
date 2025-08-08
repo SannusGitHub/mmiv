@@ -60,6 +60,12 @@ p.button:hover {
     color: #848db8;
 }
 
+.emoticon {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+}
+
 .accented {
     background-color: #444450;
     margin: 0.5em 2em;

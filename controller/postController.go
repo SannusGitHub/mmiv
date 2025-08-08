@@ -33,8 +33,13 @@ type PostData struct {
 	Timestamp    string `json:"timestamp"`
 	CommentCount string `json:"commentcount"`
 	Pinned       bool   `json:"pinned"`
+	Locked       bool   `json:"locked"`
 }
 
+/*
+TODO: add a native way for administrators and other users similar to
+lock / pin posts on start-up
+*/
 func AddPost(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in AddPost, invalid perms!\n")
@@ -76,12 +81,11 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	postContent := r.FormValue("postcontent")
-	pinned := false
 
 	WriteToSQL(`
-		INSERT INTO POSTS (id, username, postcontent, imagepath, pinned)
-		VALUES (?, ?, ?, ?, ?)
-	`, id, currentUsername, postContent, imagePath, pinned)
+		INSERT INTO POSTS (id, username, postcontent, imagepath)
+		VALUES (?, ?, ?, ?)
+	`, id, currentUsername, postContent, imagePath)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
@@ -129,7 +133,7 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := `SELECT id, username, postcontent, imagepath, timestamp, pinned FROM POSTS ORDER BY pinned DESC, id DESC`
+	query := `SELECT id, username, postcontent, imagepath, timestamp, pinned, locked FROM POSTS ORDER BY pinned DESC, id DESC`
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Fatal(err)
@@ -140,7 +144,7 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 
 	for rows.Next() {
 		var post PostData
-		err := rows.Scan(&post.Id, &post.Username, &post.PostContent, &post.Imagepath, &post.Timestamp, &post.Pinned)
+		err := rows.Scan(&post.Id, &post.Username, &post.PostContent, &post.Imagepath, &post.Timestamp, &post.Pinned, &post.Locked)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -181,6 +185,28 @@ func PinPost(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func LockPost(w http.ResponseWriter, r *http.Request) {
+	if !DoesUserMatchRank(r, "2") {
+		fmt.Printf("Rank mismatch in RequestPost, invalid perms!\n")
+		return
+	}
+
+	var data PostData
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	WriteToSQL(`UPDATE posts SET locked = ? WHERE id = ?`, data.Locked, data.Id)
+
+	fmt.Printf("Post of ID %s has been locked: %t\n", data.Id, data.Locked)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "success",
+	})
+}
+
 type CommentData struct {
 	Id           string `json:"id"`
 	ParentPostID string `json:"parentpostid"`
@@ -193,7 +219,7 @@ type CommentData struct {
 func AddComment(w http.ResponseWriter, r *http.Request) {
 	/*
 		NOTE: it would probably be a smart idea to add an if-check for whether
-		parentpostid constitutes as a post or not
+		parentpostid actually constitutes as a post or not
 	*/
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in AddComment, invalid perms!\n")
@@ -210,6 +236,18 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 	parentID, err := strconv.Atoi(r.FormValue("parentpostid"))
 	if err != nil {
 		http.Error(w, "Invalid parent post ID", http.StatusBadRequest)
+		return
+	}
+
+	var isLocked bool
+	err = db.QueryRow(`SELECT locked FROM posts WHERE id = ?`, parentID).Scan(&isLocked)
+	if err != nil {
+		log.Printf("Database error checking parent post: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+	if isLocked && !DoesUserMatchRank(r, "2") {
+		fmt.Println("Post is locked, not replying...")
 		return
 	}
 

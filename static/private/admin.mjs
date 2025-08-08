@@ -9,6 +9,11 @@ document.addEventListener("DOMContentLoaded", (e) => {
         const postId = optionsMenu.getAttribute("attached-to-id");
         pinPost(postId);
     });
+
+    document.getElementById('lock-post-button').addEventListener('click', function(e) {
+        const postId = optionsMenu.getAttribute("attached-to-id");
+        lockPost(postId);
+    });
 });
 
 function pinPost(postId) {
@@ -22,6 +27,34 @@ function pinPost(postId) {
         body: JSON.stringify({
             id: postId,
             pinned: !currentPost.pinned
+        })
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error("Failed");
+        };
+
+        return response.json();
+    }).then(data => {
+        console.log("Success:", data);
+
+        optionsMenu.style.display = "none";
+        index.fetchPosts();
+    }).catch(error => {
+        console.error("Error:", error);
+    });
+};
+
+function lockPost(postId) {
+    const currentPost = index.currentPosts.get(postId);
+
+    fetch('/api/lockPost', {
+        method: "POST",
+        header: new Headers({
+            "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({
+            id: postId,
+            locked: !currentPost.locked
         })
     }).then(response => {
         if (!response.ok) {
