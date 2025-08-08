@@ -50,7 +50,13 @@ func OpenSQL() {
 		id INTEGER PRIMARY KEY AUTOINCREMENT
 	)`)
 
-	// WriteToSQL(`ALTER TABLE posts ADD COLUMN locked INTEGER NOT NULL DEFAULT 0`)
+	WriteToSQL(`UPDATE posts
+		 SET locked = 0
+		 WHERE locked NOT IN (0, 1);`)
+
+	WriteToSQL(`UPDATE posts
+		SET pinned = 0
+		WHERE pinned NOT IN (0, 1);`)
 
 	if err = db.Ping(); err != nil {
 		log.Fatal("Cannot connect to database:", err)

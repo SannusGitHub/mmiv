@@ -143,10 +143,14 @@ export function fetchPosts() {
             
             const fileInput = document.getElementById("post-image");
             const textInput = document.getElementById("post-content");
+            const lockInput = document.getElementById("lock-post");
+            const pinInput = document.getElementById("pin-post");
 
             const formData = new FormData();
             formData.append("postcontent", textInput.value);
             formData.append("image", fileInput.files[0]);
+            formData.append("locked", lockInput.checked);
+            formData.append("pinned", pinInput.checked);
 
             fetch('/api/addPost', {
                 method: "POST",

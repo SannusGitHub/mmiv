@@ -39,6 +39,11 @@ type PostData struct {
 /*
 TODO: add a native way for administrators and other users similar to
 lock / pin posts on start-up
+
+also auto-convert any provided values to their necessary formats
+(i.e postcontent = string, username = string) to avoid erroring
+
+FIXME: "enter" key and other stuff do not create a new line in posts
 */
 func AddPost(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "1") {
@@ -82,10 +87,20 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	postContent := r.FormValue("postcontent")
 
+	var locked bool
+	var pinned bool
+	if DoesUserMatchRank(r, "2") {
+		locked = parseBoolOrFalse(r.FormValue("locked"))
+		pinned = parseBoolOrFalse(r.FormValue("pinned"))
+	} else {
+		locked = false
+		pinned = false
+	}
+
 	WriteToSQL(`
-		INSERT INTO POSTS (id, username, postcontent, imagepath)
-		VALUES (?, ?, ?, ?)
-	`, id, currentUsername, postContent, imagePath)
+		INSERT INTO POSTS (id, username, postcontent, imagepath, locked, pinned)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, id, currentUsername, postContent, imagePath, locked, pinned)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
@@ -125,6 +140,11 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 	WriteToSQL(`DELETE FROM posts WHERE id = ?`, data.Id)
 
 	fmt.Printf("Post ID %s deleted successfully\n", data.Id)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "success",
+	})
 }
 
 func RequestPost(w http.ResponseWriter, r *http.Request) {
@@ -165,7 +185,7 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 
 func PinPost(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "2") {
-		fmt.Printf("Rank mismatch in RequestPost, invalid perms!\n")
+		fmt.Printf("Rank mismatch in PinPost, invalid perms!\n")
 		return
 	}
 
@@ -187,7 +207,7 @@ func PinPost(w http.ResponseWriter, r *http.Request) {
 
 func LockPost(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "2") {
-		fmt.Printf("Rank mismatch in RequestPost, invalid perms!\n")
+		fmt.Printf("Rank mismatch in LockPost, invalid perms!\n")
 		return
 	}
 
@@ -372,4 +392,14 @@ func RequestComment(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(comments)
+}
+
+func parseBoolOrFalse(val string) bool {
+	if val == "true" {
+		return true
+	}
+	if val == "false" {
+		return false
+	}
+	return false
 }

@@ -14,6 +14,11 @@ document.addEventListener("DOMContentLoaded", (e) => {
         const postId = optionsMenu.getAttribute("attached-to-id");
         lockPost(postId);
     });
+
+    document.getElementById('delete-post-button').addEventListener('click', function(e) {
+        const postId = optionsMenu.getAttribute("attached-to-id");
+        deletePost(postId);
+    });
 });
 
 function pinPost(postId) {
@@ -55,6 +60,31 @@ function lockPost(postId) {
         body: JSON.stringify({
             id: postId,
             locked: !currentPost.locked
+        })
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error("Failed");
+        };
+
+        return response.json();
+    }).then(data => {
+        console.log("Success:", data);
+
+        optionsMenu.style.display = "none";
+        index.fetchPosts();
+    }).catch(error => {
+        console.error("Error:", error);
+    });
+}
+
+function deletePost(postId) {
+    fetch('/api/deletePost', {
+        method: "POST",
+        header: new Headers({
+            "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({
+            id: postId,
         })
     }).then(response => {
         if (!response.ok) {
