@@ -2,7 +2,16 @@ export let currentPosts = new Map;
 
 class Post {
     constructor({
-        id, username, postcontent, imagepath, commentcount, timestamp, pinned, locked, clickFunc
+        id,
+        username,
+        postcontent,
+        imagepath,
+        commentcount,
+        timestamp,
+        pinned,
+        locked,
+        hasownership,
+        clickFunc
     } = {}) {
         this.id = id;
         this.username = username;
@@ -12,13 +21,52 @@ class Post {
         this.timestamp = timestamp;
         this.pinned = pinned;
         this.locked = locked;
+        this.hasownership = hasownership;
         this.clickFunc = clickFunc;
     };
 
     createElements() {
         const postDiv = document.createElement('div');
         postDiv.className = 'accented';
-        postDiv.setAttribute('postId', this.id);
+
+        // dropdown
+
+        const dropdownDiv = document.createElement('div');
+        dropdownDiv.className = 'accented post-submit';
+        dropdownDiv.style.display = "none";
+        dropdownDiv.style.width = "2em";
+
+        let deleteOption = null;
+        if (this.hasownership) {
+            const postId = this.id;
+            deleteOption = document.createElement('p');
+            deleteOption.innerText = "Delete";
+
+            deleteOption.addEventListener('click', function(e) {
+                fetch('/api/deletePost', {
+                    method: "POST",
+                    header: new Headers({
+                        "Content-Type": "application/json",
+                    }),
+                    body: JSON.stringify({
+                        id: postId,
+                    })
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed");
+                    };
+            
+                    return response.json();
+                }).then(data => {
+                    console.log("Success:", data);
+
+                    fetchPosts();
+                }).catch(error => {
+                    console.error("Error:", error);
+                });
+            });
+        }
+        // dropdownDiv.id = "option-menu";
 
         // header
 
@@ -34,38 +82,46 @@ class Post {
         settingButtonP.setAttribute("data-post-id", this.id);
 
         const headerTitleP = document.createElement('p');
-        headerTitleP.innerHTML = `#${this.id} <span class="highlight"><b>${this.username}</b></span> @ ${this.timestamp}`;
+        const localTimestamp = new Date(this.timestamp);
+        const pad = num => String(num).padStart(2, "0");
+
+        const day = pad(localTimestamp.getDate());
+        const month = pad(localTimestamp.getMonth() + 1);
+        const year = String(localTimestamp.getFullYear()).slice(-2);
+        const hours = pad(localTimestamp.getHours());
+        const minutes = pad(localTimestamp.getMinutes());
+        const seconds = pad(localTimestamp.getSeconds());
+        const formattedTimestamp = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+
+        headerTitleP.innerHTML = `#${this.id} <span class="highlight"><b>${this.username}</b></span> @ ${formattedTimestamp} `;
         if (this.commentcount !== undefined) {
-            headerTitleP.innerHTML += ` | R: ${this.commentcount} `
+            headerTitleP.innerHTML += `<img src="/static/img/reply.png" alt="R" class="emoticon"> ${this.commentcount} `
         };
 
-        postDiv.setAttribute("pinned", this.pinned);
         if (this.pinned !== undefined && this.pinned == true) {
             postDiv.setAttribute("pinned", this.pinned)
             headerTitleP.innerHTML += `<img src="/static/img/sticky.png" alt="P" class="emoticon"> `
         };
-
-        console.log(this.locked);
+        
         if (this.locked !== undefined && this.locked == true) {
             postDiv.setAttribute("locked", this.locked);
             headerTitleP.innerHTML += `<img src="/static/img/lock.png" alt="L" class="emoticon"> `
         };
 
-        const optionsMenu = document.getElementById("option-menu");
         settingButtonP.addEventListener('click', function(e) {
             e.stopPropagation();
 
-            optionsMenu.setAttribute("attached-to-id", this.getAttribute('data-post-id'));
+            // dropdownDiv.setAttribute("attached-to-id", this.getAttribute('data-post-id'));
             const rect = settingButtonP.getBoundingClientRect();
 
-            if (optionsMenu.style.display === "none") {
-                optionsMenu.style.display = "block";
+            if (dropdownDiv.style.display === "none") {
+                dropdownDiv.style.display = "block";
             } else {
-                optionsMenu.style.display = "none";
+                dropdownDiv.style.display = "none";
             };
 
-            optionsMenu.style.top = `${rect.bottom + window.scrollY}px`;
-            optionsMenu.style.left = `${rect.left - optionsMenu.offsetWidth + settingButtonP.offsetWidth + window.scrollX}px`;
+            dropdownDiv.style.top = `${rect.bottom + window.scrollY}px`;
+            dropdownDiv.style.left = `${rect.left - dropdownDiv.offsetWidth + settingButtonP.offsetWidth + window.scrollX}px`;
         });
 
         // content
@@ -89,9 +145,11 @@ class Post {
                 if (contentImg.style.width === contentImg.naturalWidth + "px") {
                     contentImg.style.width = "150px";
                     postContentDiv.style.flexDirection = "row";
+                    postContentDiv.style.flexWrap = "nowrap";
                 } else {
                     contentImg.style.width = contentImg.naturalWidth + "px";
                     postContentDiv.style.flexDirection = "column";
+                    postContentDiv.style.flexWrap = "wrap";
                 };
             });
         };
@@ -100,6 +158,11 @@ class Post {
 
         postDiv.appendChild(headerDiv);
         postDiv.appendChild(postContentDiv);
+
+        postDiv.appendChild(dropdownDiv);
+        if (deleteOption !== null) {
+            dropdownDiv.appendChild(deleteOption);
+        };
 
         headerDiv.appendChild(headerTitleP);
         headerDiv.append(headerRightDiv);
@@ -149,8 +212,8 @@ export function fetchPosts() {
             const formData = new FormData();
             formData.append("postcontent", textInput.value);
             formData.append("image", fileInput.files[0]);
-            formData.append("locked", lockInput.checked);
-            formData.append("pinned", pinInput.checked);
+            formData.append("locked", lockInput?.checked ?? false);
+            formData.append("pinned", pinInput?.checked ?? false);
 
             fetch('/api/addPost', {
                 method: "POST",
@@ -194,6 +257,7 @@ export function fetchPosts() {
                 timestamp: element.timestamp,
                 pinned: element.pinned,
                 locked: element.locked,
+                hasownership: element.hasownership,
                 clickFunc: function() {
                     fetchComments(element);
                 }
@@ -243,8 +307,8 @@ function fetchComments(postParent) {
         }
     });
     
-    const optionsMenu = document.getElementById('option-menu');
-    optionsMenu.style.display = "none";
+    // const optionsMenu = document.getElementById('option-menu');
+    // optionsMenu.style.display = "none";
 
     fetch('/api/requestComment', {
         method: 'POST',
@@ -273,7 +337,9 @@ function fetchComments(postParent) {
                     imagepath: element.imagepath,
                     commentcount: element.commentcount,
                     timestamp: element.timestamp,
-                    pinned: element.pinned
+                    pinned: element.pinned,
+                    locked: element.locked,
+                    hasownership: element.hasownership,
                 });
 
                 currentPosts.set(newPost.id, newPost);
@@ -288,8 +354,8 @@ function fetchComments(postParent) {
 
 function returnButton() {
     document.getElementById('return-button').addEventListener('click', function() {
-        const optionsMenu = document.getElementById('option-menu');
-        optionsMenu.style.display = "none";
+        // const optionsMenu = document.getElementById('option-menu');
+        // optionsMenu.style.display = "none";
 
         fetchPosts();
     });

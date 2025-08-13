@@ -10,6 +10,7 @@ import (
 )
 
 func main() {
+	controller.LoadConfig()
 	mux := http.NewServeMux()
 
 	controller.OpenSQL()
@@ -127,7 +128,6 @@ func main() {
 	})
 
 	// home page serve section
-	tmpl := template.Must(template.ParseFiles("./static/home/index.html"))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			r.URL.Path = "/404"
@@ -142,6 +142,12 @@ func main() {
 
 		if token == nil || username == "" {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		tmpl, err := template.ParseFiles("./static/home/index.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -209,14 +215,15 @@ func main() {
 	})
 
 	// run server
-	fmt.Println("running on http://localhost:1759/")
-	http.ListenAndServe("localhost:1759", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, pattern := mux.Handler(r)
-		if pattern == "" {
-			r.URL.Path = "/404"
+	fmt.Printf("running on http://%s:%s/\n", controller.Cfg.ServerAddress, controller.Cfg.ServerPort)
+	http.ListenAndServe(controller.Cfg.ServerAddress+":"+controller.Cfg.ServerPort,
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, pattern := mux.Handler(r)
+			if pattern == "" {
+				r.URL.Path = "/404"
+				mux.ServeHTTP(w, r)
+				return
+			}
 			mux.ServeHTTP(w, r)
-			return
-		}
-		mux.ServeHTTP(w, r)
-	}))
+		}))
 }

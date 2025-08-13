@@ -13,16 +13,19 @@ import (
 )
 
 /*
-	NOTE: looking back on this, maybe it would have been more useful to have more flexible code that
-	would allow for both "Comment" posts and "Post" posts to be unified
+NOTE: looking back on this, maybe it would have been more useful to have more flexible code that
+would allow for both "Comment" posts and "Post" posts to be unified
 
-	maybe it'll come in use eventually to have these both separated, a.la post-only or comment-only
-	feature but right now I highly doubt it
+maybe it'll come in use eventually to have these both separated, a.la post-only or comment-only
+feature but right now I highly doubt it
 
-	ALSO, there should probably be a check from the back-end to the front-end that cuts out anything the
-	"user" ( rank 1 ) shouldn't need vs "admin" ( rank 2 ) needs, to avoid unnecessary data being sent &
-	also to avoid people from snooping variables and potentially exploiting vulnerabilities because they
-	know what the back-end has
+ALSO, there should probably be a check from the back-end to the front-end that cuts out anything the
+"user" ( rank 1 ) shouldn't need vs "admin" ( rank 2 ) needs, to avoid unnecessary data being sent &
+also to avoid people from snooping variables and potentially exploiting vulnerabilities because they
+know what the back-end has
+
+NOTE: also, should probably figure out how ratelimiting works in order to avoid api-spam slop
+and other stuff that may degrade the quality of the platform in some way
 */
 
 type PostData struct {
@@ -34,6 +37,7 @@ type PostData struct {
 	CommentCount string `json:"commentcount"`
 	Pinned       bool   `json:"pinned"`
 	Locked       bool   `json:"locked"`
+	HasOwnership *bool  `json:"hasownership,omitempty"`
 }
 
 /*
@@ -42,8 +46,6 @@ lock / pin posts on start-up
 
 also auto-convert any provided values to their necessary formats
 (i.e postcontent = string, username = string) to avoid erroring
-
-FIXME: "enter" key and other stuff do not create a new line in posts
 */
 func AddPost(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "1") {
@@ -109,15 +111,19 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeletePost(w http.ResponseWriter, r *http.Request) {
-	if !DoesUserMatchRank(r, "2") {
-		fmt.Printf("Rank mismatch in RemovePost, invalid perms!\n")
-		return
-	}
-
 	var data PostData
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
+	postOwner := QueryFromSQL(`SELECT username FROM posts WHERE id = ?`, data.Id)
+	if !DoesUserMatchRank(r, "2") {
+		if currentUsername != postOwner {
+			fmt.Println("DeletePost request discarded due to invalid perms")
+			return
+		}
 	}
 
 	postImagePath := QueryFromSQL(`SELECT imagepath FROM posts WHERE id = ?`, data.Id)
@@ -133,12 +139,11 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 		err = os.Remove(joinedImagePath)
 
 		if err != nil {
-			log.Fatal(err)
+			fmt.Printf("File of %s was not found...\n", joinedImagePath)
 		}
 	}
 
 	WriteToSQL(`DELETE FROM posts WHERE id = ?`, data.Id)
-
 	fmt.Printf("Post ID %s deleted successfully\n", data.Id)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -162,6 +167,7 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 
 	var posts []PostData
 
+	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	for rows.Next() {
 		var post PostData
 		err := rows.Scan(&post.Id, &post.Username, &post.PostContent, &post.Imagepath, &post.Timestamp, &post.Pinned, &post.Locked)
@@ -174,6 +180,13 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("Error counting comments for post ID %s: %v\n", post.Id, err)
 			post.CommentCount = "0"
+		}
+
+		var hasOwnership bool
+		if currentUsername == post.Username || DoesUserMatchRank(r, "2") {
+			hasOwnership = true
+			post.HasOwnership = &hasOwnership
+			// fmt.Printf("Post of ID %s is owned by requester\n", post.Id)
 		}
 
 		posts = append(posts, post)
@@ -327,15 +340,19 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 
 // untested
 func DeleteComment(w http.ResponseWriter, r *http.Request) {
-	if !DoesUserMatchRank(r, "2") {
-		fmt.Printf("Rank mismatch in RemoveComment, invalid perms!\n")
-		return
-	}
-
 	var data CommentData
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
+	postOwner := QueryFromSQL(`SELECT username FROM posts WHERE id = ?`, data.Id)
+	if !DoesUserMatchRank(r, "2") {
+		if currentUsername != postOwner {
+			fmt.Println("DeleteComment request discarded due to invalid perms")
+			return
+		}
 	}
 
 	commentImagePath := QueryFromSQL(`SELECT imagepath FROM comments WHERE id = ?`, data.Id)
@@ -362,7 +379,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 
 func RequestComment(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "1") {
-		fmt.Printf("Rank mismatch in RequestPost, invalid perms!\n")
+		fmt.Printf("Rank mismatch in RequestComments, invalid perms!\n")
 		return
 	}
 

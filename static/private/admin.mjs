@@ -1,5 +1,8 @@
 import * as index from '/static/home/index.mjs';
 
+/*
+    NOTE: maybe move this to "index.mjs" man idgaf at this point
+*/
 let optionsMenu;
 
 document.addEventListener("DOMContentLoaded", (e) => {
