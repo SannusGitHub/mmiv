@@ -37,6 +37,8 @@ type PostData struct {
 	CommentCount string `json:"commentcount"`
 	Pinned       bool   `json:"pinned"`
 	Locked       bool   `json:"locked"`
+	CanPin       *bool  `json:"canpin,omitempty"`
+	CanLock      *bool  `json:"canlock,omitempty"`
 	HasOwnership *bool  `json:"hasownership,omitempty"`
 }
 
@@ -189,6 +191,15 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 			// fmt.Printf("Post of ID %s is owned by requester\n", post.Id)
 		}
 
+		var canPin bool
+		var canLock bool
+		if DoesUserMatchRank(r, "2") {
+			canPin = true
+			canLock = true
+			post.CanPin = &canPin
+			post.CanLock = &canLock
+		}
+
 		posts = append(posts, post)
 	}
 
@@ -209,7 +220,6 @@ func PinPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteToSQL(`UPDATE posts SET pinned = ? WHERE id = ?`, data.Pinned, data.Id)
-
 	fmt.Printf("Post of ID %s has been pinned: %t\n", data.Id, data.Pinned)
 
 	w.Header().Set("Content-Type", "application/json")

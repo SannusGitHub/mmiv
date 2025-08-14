@@ -10,6 +10,8 @@ class Post {
         timestamp,
         pinned,
         locked,
+        canpin,
+        canlock,
         hasownership,
         clickFunc
     } = {}) {
@@ -21,11 +23,21 @@ class Post {
         this.timestamp = timestamp;
         this.pinned = pinned;
         this.locked = locked;
+        this.canpin = canpin;
+        this.canlock = canlock;
         this.hasownership = hasownership;
         this.clickFunc = clickFunc;
     };
 
     createElements() {
+        // vars
+
+        const postId = this.id;
+        const isPinned = this.pinned;
+        const isLocked = this.locked;
+
+        // post
+
         const postDiv = document.createElement('div');
         postDiv.className = 'accented';
 
@@ -38,7 +50,6 @@ class Post {
 
         let deleteOption = null;
         if (this.hasownership) {
-            const postId = this.id;
             deleteOption = document.createElement('p');
             deleteOption.innerText = "Delete";
 
@@ -65,7 +76,72 @@ class Post {
                     console.error("Error:", error);
                 });
             });
-        }
+        };
+
+        let pinOption = null;
+        if (this.canpin) {
+            pinOption = document.createElement('p');
+            pinOption.innerText = "Pin";
+
+            pinOption.addEventListener('click', function(e) {
+                fetch('/api/pinPost', {
+                    method: "POST",
+                    header: new Headers({
+                        "Content-Type": "application/json",
+                    }),
+                    body: JSON.stringify({
+                        id: postId,
+                        pinned: !isPinned
+                    })
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed");
+                    };
+            
+                    return response.json();
+                }).then(data => {
+                    console.log("Success:", data);
+            
+                    // optionsMenu.style.display = "none";
+                    fetchPosts();
+                }).catch(error => {
+                    console.error("Error:", error);
+                });
+            });
+        };
+
+        let lockOption = null;
+        if (this.canlock) {
+            lockOption = document.createElement('p');
+            lockOption.innerText = "Lock";
+
+            lockOption.addEventListener('click', function(e) {
+                fetch('/api/lockPost', {
+                    method: "POST",
+                    header: new Headers({
+                        "Content-Type": "application/json",
+                    }),
+                    body: JSON.stringify({
+                        id: postId,
+                        locked: !isLocked
+                    })
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed");
+                    };
+            
+                    return response.json();
+                }).then(data => {
+                    console.log("Success:", data);
+            
+                    // optionsMenu.style.display = "none";
+                    fetchPosts();
+                }).catch(error => {
+                    console.error("Error:", error);
+                });
+            });
+        };
+
         // dropdownDiv.id = "option-menu";
 
         // header
@@ -163,6 +239,12 @@ class Post {
         if (deleteOption !== null) {
             dropdownDiv.appendChild(deleteOption);
         };
+        if (pinOption !== null) {
+            dropdownDiv.appendChild(pinOption);
+        }
+        if (lockOption !== null) {
+            dropdownDiv.appendChild(lockOption);
+        };
 
         headerDiv.appendChild(headerTitleP);
         headerDiv.append(headerRightDiv);
@@ -257,6 +339,8 @@ export function fetchPosts() {
                 timestamp: element.timestamp,
                 pinned: element.pinned,
                 locked: element.locked,
+                canpin: element.canpin,
+                canlock: element.canlock,
                 hasownership: element.hasownership,
                 clickFunc: function() {
                     fetchComments(element);
@@ -339,6 +423,8 @@ function fetchComments(postParent) {
                     timestamp: element.timestamp,
                     pinned: element.pinned,
                     locked: element.locked,
+                    canpin: element.canpin,
+                    canlock: element.canlock,
                     hasownership: element.hasownership,
                 });
 
