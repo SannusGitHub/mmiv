@@ -24,7 +24,8 @@ func OpenSQL() {
 		imagepath TEXT NOT NULL,
 		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 		pinned INTEGER NOT NULL DEFAULT 0,
-		locked INTEGER NOT NULL DEFAULT 0
+		locked INTEGER NOT NULL DEFAULT 0,
+		isanonymous INTEGER NOT NULL DEFAULT 0,
 	)`)
 
 	WriteToSQL(`
@@ -42,21 +43,14 @@ func OpenSQL() {
 		username TEXT NOT NULL,
 		postcontent TEXT NOT NULL,
 		imagepath TEXT NOT NULL,
-		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+		isanonymous INTEGER NOT NULL DEFAULT 0
 	)`)
 
 	WriteToSQL(`
 		CREATE TABLE IF NOT EXISTS global_ids (
 		id INTEGER PRIMARY KEY AUTOINCREMENT
 	)`)
-
-	WriteToSQL(`UPDATE posts
-		 SET locked = 0
-		 WHERE locked NOT IN (0, 1);`)
-
-	WriteToSQL(`UPDATE posts
-		SET pinned = 0
-		WHERE pinned NOT IN (0, 1);`)
 
 	if err = db.Ping(); err != nil {
 		log.Fatal("Cannot connect to database:", err)

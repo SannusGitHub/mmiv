@@ -5,7 +5,7 @@
 <body>
     <div class="main">
         <div class="nav-bar">
-            <img class="main-img" src="/static/img/mmiv_1.png">
+            <img class="main-img" src="/static/img/banners/mmiv_1.png">
         </div>
         <div class="nav-bar accented">
             <p class="button clickable" id="return-button">Return</p>
@@ -21,6 +21,10 @@
         <form class="post-form" enctype="multipart/form-data">
             <textarea id="post-content" name="post-content" placeholder=""></textarea>
             <input id="post-image" type="file" accept="image/*">
+            <div>
+                <input id="anonymous-post" type="checkbox">
+                <label for="anonymous-post">Hide Name</label>
+            </div>
             {{if .IsAdmin}}
             <div>
                 <input id="pin-post" type="checkbox">
@@ -34,15 +38,6 @@
             <button type="submit">Submit</button>
         </form>
     </div>
-    <!--
-    <div class="accented post-submit" style="display: none; width: 2em;" id="option-menu">
-        {{if .IsAdmin}}
-        <p class="clickable" id="pin-post-button">pin thread</p>
-        <p class="clickable" id="lock-post-button">lock thread</p>
-        <p class="clickable" id="delete-post-button">delete thread</p>
-        {{end}}
-    </div>
-    -->
     <div class="footer">
         <p>(c) MMIV 2025 - FOREVER</p>
     </div>

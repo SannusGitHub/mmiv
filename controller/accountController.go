@@ -110,6 +110,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
+	// TODO: add in a session clear function here to prevent dead sessions from logout, maybe?
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "userSessionToken",
 		Value:    "",

@@ -48,6 +48,7 @@ class Post {
         dropdownDiv.style.display = "none";
         dropdownDiv.style.width = "2em";
 
+        // TODO: add delete for comments as well
         let deleteOption = null;
         if (this.hasownership) {
             deleteOption = document.createElement('p');
@@ -171,17 +172,17 @@ class Post {
 
         headerTitleP.innerHTML = `#${this.id} <span class="highlight"><b>${this.username}</b></span> @ ${formattedTimestamp} `;
         if (this.commentcount !== undefined) {
-            headerTitleP.innerHTML += `<img src="/static/img/reply.png" alt="R" class="emoticon"> ${this.commentcount} `
+            headerTitleP.innerHTML += `<img src="/static/img/icons/reply.png" alt="R" class="emoticon"> ${this.commentcount} `
         };
 
         if (this.pinned !== undefined && this.pinned == true) {
             postDiv.setAttribute("pinned", this.pinned)
-            headerTitleP.innerHTML += `<img src="/static/img/sticky.png" alt="P" class="emoticon"> `
+            headerTitleP.innerHTML += `<img src="/static/img/icons/sticky.png" alt="P" class="emoticon"> `
         };
         
         if (this.locked !== undefined && this.locked == true) {
             postDiv.setAttribute("locked", this.locked);
-            headerTitleP.innerHTML += `<img src="/static/img/lock.png" alt="L" class="emoticon"> `
+            headerTitleP.innerHTML += `<img src="/static/img/icons/lock.png" alt="L" class="emoticon"> `
         };
 
         settingButtonP.addEventListener('click', function(e) {
@@ -290,12 +291,14 @@ export function fetchPosts() {
             const textInput = document.getElementById("post-content");
             const lockInput = document.getElementById("lock-post");
             const pinInput = document.getElementById("pin-post");
+            const anonInput = document.getElementById("anonymous-post");
 
             const formData = new FormData();
             formData.append("postcontent", textInput.value);
             formData.append("image", fileInput.files[0]);
             formData.append("locked", lockInput?.checked ?? false);
             formData.append("pinned", pinInput?.checked ?? false);
+            formData.append("isanonymous", anonInput?.checked ?? false);
 
             fetch('/api/addPost', {
                 method: "POST",
@@ -365,12 +368,14 @@ function fetchComments(postParent) {
 
             const fileInput = document.getElementById("post-image");
             const textInput = document.getElementById("post-content");
+            const anonInput = document.getElementById("anonymous-post");
             const parentpostID = postParent.id;
             
             const formData = new FormData();
             formData.append("postcontent", textInput.value);
             formData.append("image", fileInput.files[0]);
             formData.append("parentpostid", parentpostID);
+            formData.append("isanonymous", anonInput?.checked ?? false);
 
             fetch('/api/addComment', {
                 method: "POST",

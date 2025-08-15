@@ -42,14 +42,16 @@ type PostData struct {
 	HasOwnership *bool  `json:"hasownership,omitempty"`
 }
 
-/*
-TODO: add a native way for administrators and other users similar to
-lock / pin posts on start-up
-
-also auto-convert any provided values to their necessary formats
-(i.e postcontent = string, username = string) to avoid erroring
-*/
 func AddPost(w http.ResponseWriter, r *http.Request) {
+	/*
+		NOTE : random name generator for anon usernames?
+		randomLine := controller.GetFileLine(
+			"static/home/names.txt",
+			rand.Intn(controller.CountFileLines("static/home/names.txt")),
+		)
+		fmt.Printf("Random line: %s\n", randomLine)
+	*/
+
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in AddPost, invalid perms!\n")
 		return
@@ -90,21 +92,22 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	postContent := r.FormValue("postcontent")
+	isAnonymous := ParseBoolOrFalse(r.FormValue("isanonymous"))
 
 	var locked bool
 	var pinned bool
 	if DoesUserMatchRank(r, "2") {
-		locked = parseBoolOrFalse(r.FormValue("locked"))
-		pinned = parseBoolOrFalse(r.FormValue("pinned"))
+		locked = ParseBoolOrFalse(r.FormValue("locked"))
+		pinned = ParseBoolOrFalse(r.FormValue("pinned"))
 	} else {
 		locked = false
 		pinned = false
 	}
 
 	WriteToSQL(`
-		INSERT INTO POSTS (id, username, postcontent, imagepath, locked, pinned)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`, id, currentUsername, postContent, imagePath, locked, pinned)
+		INSERT INTO POSTS (id, username, postcontent, imagepath, locked, pinned, isanonymous)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, id, currentUsername, postContent, imagePath, locked, pinned, isAnonymous)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
@@ -160,7 +163,7 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := `SELECT id, username, postcontent, imagepath, timestamp, pinned, locked FROM POSTS ORDER BY pinned DESC, id DESC`
+	query := `SELECT id, username, postcontent, imagepath, timestamp, pinned, locked, isanonymous FROM POSTS ORDER BY pinned DESC, id DESC`
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Fatal(err)
@@ -172,7 +175,18 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	for rows.Next() {
 		var post PostData
-		err := rows.Scan(&post.Id, &post.Username, &post.PostContent, &post.Imagepath, &post.Timestamp, &post.Pinned, &post.Locked)
+		var isAnonymous bool
+
+		err := rows.Scan(
+			&post.Id,
+			&post.Username,
+			&post.PostContent,
+			&post.Imagepath,
+			&post.Timestamp,
+			&post.Pinned,
+			&post.Locked,
+			&isAnonymous,
+		)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -182,6 +196,15 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("Error counting comments for post ID %s: %v\n", post.Id, err)
 			post.CommentCount = "0"
+		}
+
+		// hidden name case
+		if isAnonymous {
+			if DoesUserMatchRank(r, "2") {
+				post.Username = post.Username + " (hidden)"
+			} else {
+				post.Username = "hidden"
+			}
 		}
 
 		var hasOwnership bool
@@ -257,6 +280,7 @@ type CommentData struct {
 	PostContent  string `json:"postcontent"`
 	Imagepath    string `json:"imagepath"`
 	Timestamp    string `json:"timestamp"`
+	HasOwnership *bool  `json:"hasownership,omitempty"`
 }
 
 func AddComment(w http.ResponseWriter, r *http.Request) {
@@ -335,12 +359,13 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	postContent := r.FormValue("postcontent")
+	isAnonymous := ParseBoolOrFalse(r.FormValue("isanonymous"))
 	ParentPostID := r.FormValue("parentpostid")
 
 	WriteToSQL(`
-		INSERT INTO COMMENTS (id, parentpostid, username, postcontent, imagepath)
-		VALUES (?, ?, ?, ?, ?)
-	`, id, ParentPostID, currentUsername, postContent, imagePath)
+		INSERT INTO COMMENTS (id, parentpostid, username, postcontent, imagepath, isanonymous)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, id, ParentPostID, currentUsername, postContent, imagePath, isAnonymous)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
@@ -408,25 +433,22 @@ func RequestComment(w http.ResponseWriter, r *http.Request) {
 
 	var comments []CommentData
 
+	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	for rows.Next() {
 		var comment CommentData
 		err := rows.Scan(&comment.Id, &comment.Username, &comment.PostContent, &comment.Imagepath, &comment.Timestamp)
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		var hasOwnership bool
+		if currentUsername == comment.Username || DoesUserMatchRank(r, "2") {
+			hasOwnership = true
+			comment.HasOwnership = &hasOwnership
+		}
 		comments = append(comments, comment)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(comments)
-}
-
-func parseBoolOrFalse(val string) bool {
-	if val == "true" {
-		return true
-	}
-	if val == "false" {
-		return false
-	}
-	return false
 }
