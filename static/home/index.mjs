@@ -3,6 +3,7 @@ export let currentPosts = new Map;
 class Post {
     constructor({
         id,
+        parentpost,
         username,
         postcontent,
         imagepath,
@@ -13,9 +14,11 @@ class Post {
         canpin,
         canlock,
         hasownership,
+        iscomment,
         clickFunc
     } = {}) {
         this.id = id;
+        this.parentpost = parentpost;
         this.username = username;
         this.postcontent = postcontent;
         this.commentcount = commentcount;
@@ -26,6 +29,7 @@ class Post {
         this.canpin = canpin;
         this.canlock = canlock;
         this.hasownership = hasownership;
+        this.iscomment = iscomment,
         this.clickFunc = clickFunc;
     };
 
@@ -33,8 +37,10 @@ class Post {
         // vars
 
         const postId = this.id;
+        const parentPost = this.parentpost;
         const isPinned = this.pinned;
         const isLocked = this.locked;
+        const isComment = this.iscomment;
 
         // post
 
@@ -48,14 +54,19 @@ class Post {
         dropdownDiv.style.display = "none";
         dropdownDiv.style.width = "2em";
 
-        // TODO: add delete for comments as well
         let deleteOption = null;
         if (this.hasownership) {
             deleteOption = document.createElement('p');
+            deleteOption.className = "clickable";
             deleteOption.innerText = "Delete";
+            
+            let url = '/api/deletePost';
+            if (isComment) {
+                url = '/api/deleteComment';
+            }
 
             deleteOption.addEventListener('click', function(e) {
-                fetch('/api/deletePost', {
+                fetch(url, {
                     method: "POST",
                     header: new Headers({
                         "Content-Type": "application/json",
@@ -72,7 +83,11 @@ class Post {
                 }).then(data => {
                     console.log("Success:", data);
 
-                    fetchPosts();
+                    if (isComment) {
+                        fetchComments(parentPost);
+                    } else {
+                        fetchPosts();
+                    }
                 }).catch(error => {
                     console.error("Error:", error);
                 });
@@ -82,6 +97,7 @@ class Post {
         let pinOption = null;
         if (this.canpin) {
             pinOption = document.createElement('p');
+            pinOption.className = "clickable";
             pinOption.innerText = "Pin";
 
             pinOption.addEventListener('click', function(e) {
@@ -114,6 +130,7 @@ class Post {
         let lockOption = null;
         if (this.canlock) {
             lockOption = document.createElement('p');
+            lockOption.className = "clickable";
             lockOption.innerText = "Lock";
 
             lockOption.addEventListener('click', function(e) {
@@ -345,6 +362,7 @@ export function fetchPosts() {
                 canpin: element.canpin,
                 canlock: element.canlock,
                 hasownership: element.hasownership,
+                iscomment: element.iscomment,
                 clickFunc: function() {
                     fetchComments(element);
                 }
@@ -421,6 +439,7 @@ function fetchComments(postParent) {
             data.forEach((element) => {
                 const newPost = new Post({
                     id: element.id,
+                    parentpost: postParent,
                     username: element.username,
                     postcontent: element.postcontent,
                     imagepath: element.imagepath,
@@ -431,6 +450,7 @@ function fetchComments(postParent) {
                     canpin: element.canpin,
                     canlock: element.canlock,
                     hasownership: element.hasownership,
+                    iscomment: element.iscomment,
                 });
 
                 currentPosts.set(newPost.id, newPost);

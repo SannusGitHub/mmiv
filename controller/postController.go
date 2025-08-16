@@ -280,6 +280,7 @@ type CommentData struct {
 	PostContent  string `json:"postcontent"`
 	Imagepath    string `json:"imagepath"`
 	Timestamp    string `json:"timestamp"`
+	IsComment    bool   `json:"iscomment"`
 	HasOwnership *bool  `json:"hasownership,omitempty"`
 }
 
@@ -408,8 +409,12 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteToSQL(`DELETE FROM comments WHERE id = ?`, data.Id)
-
 	fmt.Printf("Comment ID %s deleted successfully\n", data.Id)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "success",
+	})
 }
 
 func RequestComment(w http.ResponseWriter, r *http.Request) {
@@ -424,7 +429,7 @@ func RequestComment(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	query := `SELECT id, username, postcontent, imagepath, timestamp FROM COMMENTS WHERE parentpostid = ?`
+	query := `SELECT id, username, postcontent, imagepath, timestamp, isanonymous FROM COMMENTS WHERE parentpostid = ?`
 	rows, err := db.Query(query, data.ParentPostID)
 	if err != nil {
 		log.Fatal(err)
@@ -436,9 +441,26 @@ func RequestComment(w http.ResponseWriter, r *http.Request) {
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	for rows.Next() {
 		var comment CommentData
-		err := rows.Scan(&comment.Id, &comment.Username, &comment.PostContent, &comment.Imagepath, &comment.Timestamp)
+		var isAnonymous bool
+
+		err := rows.Scan(
+			&comment.Id,
+			&comment.Username,
+			&comment.PostContent,
+			&comment.Imagepath,
+			&comment.Timestamp,
+			&isAnonymous,
+		)
 		if err != nil {
 			log.Fatal(err)
+		}
+
+		if isAnonymous {
+			if DoesUserMatchRank(r, "2") {
+				comment.Username = comment.Username + " (hidden)"
+			} else {
+				comment.Username = "hidden"
+			}
 		}
 
 		var hasOwnership bool
@@ -446,6 +468,11 @@ func RequestComment(w http.ResponseWriter, r *http.Request) {
 			hasOwnership = true
 			comment.HasOwnership = &hasOwnership
 		}
+
+		// add a marker to differentiate front-end whether a post element is a comment
+		// yes i'm doing it this way. there's probably a better way. sue me.
+		comment.IsComment = true
+
 		comments = append(comments, comment)
 	}
 
