@@ -4,14 +4,16 @@
 </head>
 <body>
     <div class="main">
-        <div class="nav-bar">
-            <img class="main-img" src="/static/img/banners/mmiv_1.png">
+        <div class="main-img">
+            <img src="/static/img/banners/mmiv_1.png">
         </div>
         <div class="nav-bar accented">
             <p class="button clickable" id="return-button">Return</p>
-            <p class="button clickable" id="account-button">Account</p>
             <p class="button clickable" id="post-button">Post</p>
             <p class="button clickable" id="logout-button">Logout</p>
+        </div>
+        <div class="announcement">
+            <p>ANNOUNCEMENT: This is a cool ass announcement.</p>
         </div>
         <div id="content">
         </div>
@@ -35,6 +37,7 @@
                 <label for="lock-post">Locked</label>
             </div>
             {{end}}
+            <p id="error-text" style="color: red;"></p>
             <button type="submit">Submit</button>
         </form>
     </div>

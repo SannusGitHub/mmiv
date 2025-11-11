@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -79,4 +81,15 @@ func CountFileLines(fileName string) int {
 		count++
 	}
 	return count
+}
+
+func IsAcceptedFileFormat(filename string, acceptedFormats []string) bool {
+	ext := strings.ToLower(filepath.Ext(filename))
+	for _, format := range acceptedFormats {
+		if ext == format {
+			return true
+		}
+	}
+
+	return false
 }

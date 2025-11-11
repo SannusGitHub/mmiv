@@ -309,6 +309,7 @@ export function fetchPosts() {
             const lockInput = document.getElementById("lock-post");
             const pinInput = document.getElementById("pin-post");
             const anonInput = document.getElementById("anonymous-post");
+            const errorText = document.getElementById("error-text");
 
             const formData = new FormData();
             formData.append("postcontent", textInput.value);
@@ -322,8 +323,12 @@ export function fetchPosts() {
                 body: formData,
             }).then(response => {
                 if (!response.ok) {
-                    throw new Error("Upload failed");
+                    return response.text().then(text => {
+                        errorText.textContent = text || response.statusText;
+                        throw new Error(text || response.statusText);
+                    });
                 }
+
                 return response.json();
             }).then(data => {
                 console.log("Success:", data);
@@ -387,6 +392,7 @@ function fetchComments(postParent) {
             const fileInput = document.getElementById("post-image");
             const textInput = document.getElementById("post-content");
             const anonInput = document.getElementById("anonymous-post");
+            const errorText = document.getElementById("error-text");
             const parentpostID = postParent.id;
             
             const formData = new FormData();
@@ -400,8 +406,12 @@ function fetchComments(postParent) {
                 body: formData,
             }).then(response => {
                 if (!response.ok) {
-                    throw new Error("Upload failed");
+                    return response.text().then(text => {
+                        errorText.textContent = text || response.statusText;
+                        throw new Error(text || response.statusText);
+                    });
                 }
+
                 return response.json();
             }).then(data => {
                 console.log("Success:", data);

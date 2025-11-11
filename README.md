@@ -1,15 +1,21 @@
-# MMIV Project
+# About
+This repository contains the project code for MMIV (2004), a simple one-board imageboard platform made in Go.
 
-This repository contains the project code for MMIV (2004), a faux-imageboard platform made from the ground-up in Golang.
+The project was made as practice to see how the general process of creating a full-stack application from the ground-up could be done.
+Initially started out as a 'what-if', this project was aimed with the goal of having minimal dependencies and as such has a relatively 
+light and fast setup.
 
-## About
-
-The main objective of this project is to create a simple, rather basic imageboard-like platform that can be hosted with
-relative ease on a platform that supports Golang.
+## Installation
+1. Download the repository source code from this repository.
+2. Run with `go run main.go`
 
 ## Features
+* GIF, JPG, JPEG, PNG upload.
+* Creating posts and creating replies.
+* Back-end and front-end error handling.
+* Basic moderation tools.
 
-This project features the following:
-* An HTML server which will function as the hosting software
-* Account creation (Logging in, registering)
-* Post and comment creation/deletion
+## Cons
+* Does not include rate limiting.
+* Has not been tested much, no unit / integration tests.
+* Not built with efficient scalability in mind.

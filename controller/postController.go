@@ -28,6 +28,10 @@ NOTE: also, should probably figure out how ratelimiting works in order to avoid 
 and other stuff that may degrade the quality of the platform in some way
 */
 
+var acceptedFileFormats = []string{
+	".jpg", ".jpeg", ".png", ".gif",
+}
+
 type PostData struct {
 	Id           string `json:"id"`
 	Username     string `json:"username"`
@@ -43,17 +47,9 @@ type PostData struct {
 }
 
 func AddPost(w http.ResponseWriter, r *http.Request) {
-	/*
-		NOTE : random name generator for anon usernames?
-		randomLine := controller.GetFileLine(
-			"static/home/names.txt",
-			rand.Intn(controller.CountFileLines("static/home/names.txt")),
-		)
-		fmt.Printf("Random line: %s\n", randomLine)
-	*/
-
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in AddPost, invalid perms!\n")
+		http.Error(w, "No permission to upload post!", http.StatusForbidden)
 		return
 	}
 
@@ -65,6 +61,14 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 
 	var imagePath string
 	file, handler, err := r.FormFile("image")
+
+	// check if file format is actually a format we want displayed, otherwise reject (avoid malicious uploads or smth like that)
+	if !IsAcceptedFileFormat(handler.Filename, acceptedFileFormats) {
+		fmt.Printf("User fed in unaccepted file format of %s, aborting...\n", handler.Filename)
+		http.Error(w, "Unsupported file format!", http.StatusUnsupportedMediaType)
+		return
+	}
+
 	if err == nil {
 		defer file.Close()
 
@@ -291,6 +295,7 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 	*/
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in AddComment, invalid perms!\n")
+		http.Error(w, "No permission to upload comment!", http.StatusForbidden)
 		return
 	}
 
@@ -333,6 +338,13 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 
 	var imagePath string
 	file, handler, err := r.FormFile("image")
+
+	if !IsAcceptedFileFormat(handler.Filename, acceptedFileFormats) {
+		fmt.Printf("User fed in unaccepted file format of %s, aborting...\n", handler.Filename)
+		http.Error(w, "Unsupported file format!", http.StatusUnsupportedMediaType)
+		return
+	}
+
 	if err == nil {
 		defer file.Close()
 
@@ -374,7 +386,6 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// untested
 func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	var data CommentData
 	err := json.NewDecoder(r.Body).Decode(&data)
