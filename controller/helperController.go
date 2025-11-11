@@ -10,6 +10,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
+/*
+	these are just general helper functions that are too general to fit into any niche category in this project:
+
+	stuff like checking variables, functions for comparisons that might need to be done in multiple situations,
+	anything that doesn't fit into specific main post stuff
+*/
+
 type Config struct {
 	ServerAddress string
 	ServerPort    string

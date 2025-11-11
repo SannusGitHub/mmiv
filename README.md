@@ -12,6 +12,7 @@ light and fast setup.
 ## Features
 * Posting
      * Account-based posting
+     * IDs, timestamps, total replies
      * Optional hidden username posting
      * Optional PNG, GIF, JPEG uploads
 * Moderating

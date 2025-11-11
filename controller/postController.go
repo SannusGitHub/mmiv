@@ -13,25 +13,43 @@ import (
 )
 
 /*
-NOTE: looking back on this, maybe it would have been more useful to have more flexible code that
-would allow for both "Comment" posts and "Post" posts to be unified
+	anything related to posting stuff is here: creating / removing / retrieving posts alongside comments
+	and their relevant data.
 
-maybe it'll come in use eventually to have these both separated, a.la post-only or comment-only
-feature but right now I highly doubt it
+	NOTE: looking back on this, maybe it would have been more useful to have more flexible code that
+	would allow for both "Comment" posts and "Post" posts to be unified. too bad, i've already decided
+	on two specific formats
 
-ALSO, there should probably be a check from the back-end to the front-end that cuts out anything the
-"user" ( rank 1 ) shouldn't need vs "admin" ( rank 2 ) needs, to avoid unnecessary data being sent &
-also to avoid people from snooping variables and potentially exploiting vulnerabilities because they
-know what the back-end has
+	maybe it'll come in use eventually to have these both separated, a.la post-only or comment-only
+	feature but right now I highly doubt it
 
-NOTE: also, should probably figure out how ratelimiting works in order to avoid api-spam slop
-and other stuff that may degrade the quality of the platform in some way
+	ALSO, there should probably be a check from the back-end to the front-end that cuts out anything the
+	"user" ( rank 1 ) shouldn't need vs "admin" ( rank 2 ) needs, to avoid unnecessary data being sent &
+	also to avoid people from snooping variables and potentially exploiting vulnerabilities because they
+	know what the back-end has
+
+	NOTE: also, should probably figure out how ratelimiting works in order to avoid api-spam slop
+	and other stuff that may degrade the quality of the platform in some way
 */
 
 var acceptedFileFormats = []string{
 	".jpg", ".jpeg", ".png", ".gif",
 }
 
+/*
+struct for post-related data that we can assemble and serve
+  - ID: ID of the post in the database, front-end displayed numerically as well
+  - Username: Username of the person that created the post
+  - PostContent: text string accompanied by the post
+  - Imagepath: local machine path to the image that's being stored
+  - Timestamp: timestamp of when the post was submitted
+  - CommentCount: how many children comments the post has
+  - Pinned: whether post is pinned by someone with escalated privileges (shows up top)
+  - Locked: whether post is uncommentable by someone with escalated privileges (shows up top)
+  - CanPin: back-end variable for when administrators are querying a post and should have the option of pinning available
+  - CanLock: back-end variable for when administrators are querying a post and should have the option of locking available
+  - HasOwnership: back-end variable for when a person has "ownership" of a post
+*/
 type PostData struct {
 	Id           string `json:"id"`
 	Username     string `json:"username"`
@@ -46,6 +64,47 @@ type PostData struct {
 	HasOwnership *bool  `json:"hasownership,omitempty"`
 }
 
+/*
+adding posts, AddPost() function does the following outlined:
+
+  - checks whether the user is properly authenticated as a valid "account" member
+
+    if not above rank "1", return invalid permission and no permission error. they're
+    not allowed to post because they don't have a valid account they're logged into
+
+  - parse the form given for adding a post and acquire the variables, this includes
+    retrieving the data for and assembling the PostData struct as follows:
+
+    userSessionToken - for usernames and anything to do with account specific details, so
+    we know that it's "the person" that is trying to upload it
+
+    postContent - string of what message the user wants to upload
+
+    imagePath - the asset, raw image itself and where it will be uploaded to on the server
+    (in this case the /uploads/ directory)
+
+    locked, pinned, isAnonymous - self explanitory, any secondary options that the user chooses
+
+  - get the raw image from the form (imagePath, file, handler, err under r.FormFile("image"))
+
+  - check whether it is an accepted file format (assigned with "acceptedFileFormats" variable)
+
+    if file does not constitute as a "valid" format from a predetermined list we return false,
+    cancel adding a post and display an error message for the front-end letting them know
+
+  - upload the file with an unique timestamp on the machine to /uploads directory
+
+    timestamp is added to avoid any duplicate names and to trace when it was uploaded
+
+  - check for any secondary variables (if the post has been requested to be locked, pinned, anonymized)
+
+    and of course, default any variables to a default state whenever a person that should have
+    no permissions attempts to do administrator actions like locking or pinning
+
+  - finally run WriteToSQL(), feeding in id, currentUsername, postContent, imagePath, locked, pinned, isAnonymous
+
+    ...and then return success to the front-end
+*/
 func AddPost(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in AddPost, invalid perms!\n")
@@ -118,6 +177,19 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+/*
+refer to comment about addPost() function, generally the same vibe except reversed
+
+  - get username of the person asking for a delete request and the ID of the post
+
+  - check if post is either owned by the user or delete is requested by administrator,
+    if neither are valid then return due to invalid permissions
+
+  - get the image path of the post and delete it, just to avoid unnecessary storage of
+    files we no longer want
+
+  - delete from database using the ID we acquired from the request
+*/
 func DeletePost(w http.ResponseWriter, r *http.Request) {
 	var data PostData
 	err := json.NewDecoder(r.Body).Decode(&data)
@@ -294,7 +366,7 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 	*/
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in AddComment, invalid perms!\n")
-		// http.Error(w, "No permission to upload comment!", http.StatusForbidden)
+		http.Error(w, "No permission to upload comment!", http.StatusForbidden)
 		return
 	}
 
