@@ -10,12 +10,15 @@ light and fast setup.
 2. Run with `go run main.go`
 
 ## Features
-* GIF, JPG, JPEG, PNG upload.
-* Creating posts and creating replies.
-* Back-end and front-end error handling.
-* Basic moderation tools.
+* Posting
+     * Account-based posting
+     * Optional hidden username posting
+     * Optional PNG, GIF, JPEG uploads
+* Moderating
+     * Pinning and locking of user posts
+     * Deletion of posts
 
 ## Cons
-* Does not include rate limiting.
-* Has not been tested much, no unit / integration tests.
-* Not built with efficient scalability in mind.
+* Does not include rate limiting and safety features
+* Has not been tested much, no unit / integration tests
+* Not built with efficient scalability in mind

@@ -62,15 +62,14 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 	var imagePath string
 	file, handler, err := r.FormFile("image")
 
-	// check if file format is actually a format we want displayed, otherwise reject (avoid malicious uploads or smth like that)
-	if !IsAcceptedFileFormat(handler.Filename, acceptedFileFormats) {
-		fmt.Printf("User fed in unaccepted file format of %s, aborting...\n", handler.Filename)
-		http.Error(w, "Unsupported file format!", http.StatusUnsupportedMediaType)
-		return
-	}
-
 	if err == nil {
 		defer file.Close()
+
+		if !IsAcceptedFileFormat(handler.Filename, acceptedFileFormats) {
+			fmt.Printf("User fed in unaccepted file format of %s, aborting...\n", handler.Filename)
+			http.Error(w, "Unsupported file format!", http.StatusUnsupportedMediaType)
+			return
+		}
 
 		uniqueName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), handler.Filename)
 		imagePath = filepath.Join("uploads", uniqueName)
@@ -207,7 +206,7 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 			if DoesUserMatchRank(r, "2") {
 				post.Username = post.Username + " (hidden)"
 			} else {
-				post.Username = "hidden"
+				post.Username = "Hidden"
 			}
 		}
 
@@ -295,7 +294,7 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 	*/
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in AddComment, invalid perms!\n")
-		http.Error(w, "No permission to upload comment!", http.StatusForbidden)
+		// http.Error(w, "No permission to upload comment!", http.StatusForbidden)
 		return
 	}
 
@@ -339,14 +338,14 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 	var imagePath string
 	file, handler, err := r.FormFile("image")
 
-	if !IsAcceptedFileFormat(handler.Filename, acceptedFileFormats) {
-		fmt.Printf("User fed in unaccepted file format of %s, aborting...\n", handler.Filename)
-		http.Error(w, "Unsupported file format!", http.StatusUnsupportedMediaType)
-		return
-	}
-
 	if err == nil {
 		defer file.Close()
+
+		if !IsAcceptedFileFormat(handler.Filename, acceptedFileFormats) {
+			fmt.Printf("User fed in unaccepted file format of %s, aborting...\n", handler.Filename)
+			http.Error(w, "Unsupported file format!", http.StatusUnsupportedMediaType)
+			return
+		}
 
 		uniqueName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), handler.Filename)
 		imagePath = filepath.Join("uploads", uniqueName)
