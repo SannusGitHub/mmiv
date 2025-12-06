@@ -188,8 +188,11 @@ p.button:hover {
     display: flex;
     align-items: center;
     justify-content: center;
+    text-align: center;
 
     border: 4px solid #454574;
     border-left-style: none;
     border-top-style: none;
+
+    display: none;
 }

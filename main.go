@@ -92,7 +92,7 @@ func main() {
 		http.StripPrefix("/static/home/", fs).ServeHTTP(w, r)
 	})
 
-	// private directory for handling access to stuff the average user / stranger shouldn't prolly accewss
+	// private directory for handling access to stuff the average user / stranger shouldn't prolly access
 	mux.HandleFunc("/static/private/", func(w http.ResponseWriter, r *http.Request) {
 		if !controller.DoesUserMatchRank(r, "2") {
 			http.Redirect(w, r, "/404", http.StatusSeeOther)
@@ -212,6 +212,18 @@ func main() {
 
 	mux.HandleFunc("/api/deleteUser", func(w http.ResponseWriter, r *http.Request) {
 		controller.DeleteUser(w, r)
+	})
+
+	mux.HandleFunc("/api/addAnnouncement", func(w http.ResponseWriter, r *http.Request) {
+		controller.AddAnnouncement(w, r)
+	})
+
+	mux.HandleFunc("/api/removeAnnouncement", func(w http.ResponseWriter, r *http.Request) {
+		controller.RemoveAnnouncement(w, r)
+	})
+
+	mux.HandleFunc("/api/requestAnnouncement", func(w http.ResponseWriter, r *http.Request) {
+		controller.RequestAnnouncement(w, r)
 	})
 
 	// run server

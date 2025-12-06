@@ -5,7 +5,7 @@ The project was made as practice to see how the general process of creating a fu
 Initially started out as a 'what-if', this project was aimed with the goal of having minimal dependencies and as such has a relatively 
 light and fast setup.
 
-## Installation
+## Local Installation
 1. Download the repository source code from this repository.
 2. Run with `go run main.go`
 
@@ -16,8 +16,7 @@ light and fast setup.
      * Optional hidden username posting
      * Optional PNG, GIF, JPEG uploads
 * Moderating
-     * Pinning and locking of user posts
-     * Deletion of posts
+     * Pinning, locking and deletion of user posts
 
 ## Cons
 * Does not include rate limiting and safety features

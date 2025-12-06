@@ -473,6 +473,71 @@ function fetchComments(postParent) {
     });
 };
 
+function addAnnouncement() {
+    const formData = new URLSearchParams();
+    formData.append("content", "This is a test announcement!");
+
+    fetch('/api/addAnnouncement', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: formData.toString(),
+    }).then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                errorText.textContent = text || response.statusText;
+                throw new Error(text || response.statusText);
+            });
+        }
+
+        return response.json();
+    }).then(data => {
+        console.log("Success:", data);
+    }).catch(error => {
+        console.error("Error:", error);
+    });
+}
+
+function fetchAnnouncement() {
+    fetch('/api/requestAnnouncement', {
+        method: 'GET',
+    }).then(res => {
+        if (!res.ok) {
+            throw new Error("Failed");
+        }
+        return res.json();
+    }).then(data => {
+        console.log("Success:", data);
+        
+        const announcement = document.getElementById("announcement");
+        if (data.content == "") {
+            announcement.remove();
+            return;
+        };
+
+        announcement.style = "display: block;";
+        document.getElementById("announcement-text").innerHTML = data.content;
+    }).catch(error => {
+        console.error("Error:", error);
+    });
+}
+
+function removeAnnouncement() {
+    fetch('/api/removeAnnouncement', {
+        method: 'GET',
+    }).then(res => {
+        if (!res.ok) {
+            throw new Error("Failed");
+        }
+        return res.json();
+    }).then(data => {
+        console.log("Success:", data);
+    }).catch(error => {
+        console.error("Error:", error);
+    });
+}
+
 function returnButton() {
     document.getElementById('return-button').addEventListener('click', function() {
         // const optionsMenu = document.getElementById('option-menu');
@@ -557,4 +622,5 @@ document.addEventListener("DOMContentLoaded", (event) => {
     returnButton();
     logoutButton();
     fetchPosts();
+    fetchAnnouncement();
 });

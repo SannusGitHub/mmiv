@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -233,6 +234,8 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 }
 
 func RequestPost(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Attempting post request...")
+
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in RequestPost, invalid perms!\n")
 		return
@@ -241,7 +244,12 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 	query := `SELECT id, username, postcontent, imagepath, timestamp, pinned, locked, isanonymous FROM POSTS ORDER BY pinned DESC, id DESC`
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Fatal(err)
+		if err == sql.ErrNoRows {
+			fmt.Println("No posts found, returning null...")
+		} else {
+			log.Fatal(err)
+			return
+		}
 	}
 	defer rows.Close()
 
@@ -308,6 +316,7 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 func PinPost(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "2") {
 		fmt.Printf("Rank mismatch in PinPost, invalid perms!\n")
+		http.Error(w, "No permission to pin post!", http.StatusForbidden)
 		return
 	}
 
@@ -329,6 +338,7 @@ func PinPost(w http.ResponseWriter, r *http.Request) {
 func LockPost(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "2") {
 		fmt.Printf("Rank mismatch in LockPost, invalid perms!\n")
+		http.Error(w, "No permission to lock post!", http.StatusForbidden)
 		return
 	}
 
@@ -383,6 +393,7 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// a check for whether the post is locked: return error if it is and user isn't admin
 	var isLocked bool
 	err = db.QueryRow(`SELECT locked FROM posts WHERE id = ?`, parentID).Scan(&isLocked)
 	if err != nil {
@@ -392,9 +403,11 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 	}
 	if isLocked && !DoesUserMatchRank(r, "2") {
 		fmt.Println("Post is locked, not replying...")
+		http.Error(w, "Cannot comment under post, locked!", http.StatusForbidden)
 		return
 	}
 
+	// a check for whether the post exists: return error if it doesn't exist
 	var exists bool
 	err = db.QueryRow(`SELECT EXISTS(SELECT 1 FROM posts WHERE id = ?)`, parentID).Scan(&exists)
 	if err != nil {
@@ -502,6 +515,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 func RequestComment(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in RequestComments, invalid perms!\n")
+		http.Error(w, "Invalid permission when trying to remove comment!", http.StatusUnsupportedMediaType)
 		return
 	}
 

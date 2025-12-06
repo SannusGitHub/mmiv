@@ -2,6 +2,7 @@ package controller
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -16,6 +17,7 @@ func OpenSQL() {
 		log.Fatal(err)
 	}
 
+	fmt.Println("creating posts...")
 	WriteToSQL(`
 		CREATE TABLE IF NOT EXISTS posts (
 		id INTEGER PRIMARY KEY,
@@ -25,7 +27,7 @@ func OpenSQL() {
 		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 		pinned INTEGER NOT NULL DEFAULT 0,
 		locked INTEGER NOT NULL DEFAULT 0,
-		isanonymous INTEGER NOT NULL DEFAULT 0,
+		isanonymous INTEGER NOT NULL DEFAULT 0
 	)`)
 
 	WriteToSQL(`
@@ -45,6 +47,13 @@ func OpenSQL() {
 		imagepath TEXT NOT NULL,
 		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 		isanonymous INTEGER NOT NULL DEFAULT 0
+	)`)
+
+	WriteToSQL(`
+		CREATE TABLE IF NOT EXISTS announcements (
+		id INTEGER PRIMARY KEY CHECK (id = 1),
+		content TEXT NOT NULL,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`)
 
 	WriteToSQL(`
