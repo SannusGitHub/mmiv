@@ -10,11 +10,24 @@ light and fast setup.
 2. Run with `go run main.go`
 
 ## Features
+* Website
+     * Basic interface
+         * Login screen
+         * Basic admin dashboard
+         * Viewing posts and comments
+         * Creating posts and comments
+     * Permission-gated sections
+* Accounts
+     * Logging in & Registering
+     * Username, Hashed Password
+     * Persistent Sessions
+     * Permissions
 * Posting
      * Account-based posting
      * IDs, timestamps, total replies
      * Optional hidden username posting
      * Optional PNG, GIF, JPEG uploads
+         * With MIME & Ext checks
 * Moderating
      * Pinning, locking and deletion of user posts
 
