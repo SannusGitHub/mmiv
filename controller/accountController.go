@@ -130,7 +130,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 
 func AddUser(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "2") {
-		fmt.Printf("Rank mismatch, invalid perms!\n")
+		fmt.Printf("Rank mismatch when attempting to AddUser, invalid perms!\n")
 		return
 	}
 
@@ -158,7 +158,7 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "2") {
-		fmt.Printf("Rank mismatch, invalid perms!\n")
+		fmt.Printf("Rank mismatch when attempting to DeleteUser, invalid perms!\n")
 		return
 	}
 

@@ -380,6 +380,9 @@ export function fetchPosts() {
     }).catch(error => {
         console.error("Error:", error);
     });
+
+    const returnButton = document.getElementById('return-button');
+    returnButton.style = "display: none";
 };
 
 function fetchComments(postParent) {
@@ -471,33 +474,10 @@ function fetchComments(postParent) {
     }).catch(error => {
         console.error("Error:", error);
     });
+
+    const returnButton = document.getElementById('return-button');
+    returnButton.style = "display: block";
 };
-
-function addAnnouncement() {
-    const formData = new URLSearchParams();
-    formData.append("content", "This is a test announcement!");
-
-    fetch('/api/addAnnouncement', {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: formData.toString(),
-    }).then(response => {
-        if (!response.ok) {
-            return response.text().then(text => {
-                errorText.textContent = text || response.statusText;
-                throw new Error(text || response.statusText);
-            });
-        }
-
-        return response.json();
-    }).then(data => {
-        console.log("Success:", data);
-    }).catch(error => {
-        console.error("Error:", error);
-    });
-}
 
 function fetchAnnouncement() {
     fetch('/api/requestAnnouncement', {
@@ -523,29 +503,25 @@ function fetchAnnouncement() {
     });
 }
 
-function removeAnnouncement() {
-    fetch('/api/removeAnnouncement', {
-        method: 'GET',
-    }).then(res => {
-        if (!res.ok) {
-            throw new Error("Failed");
-        }
-        return res.json();
-    }).then(data => {
-        console.log("Success:", data);
-    }).catch(error => {
-        console.error("Error:", error);
-    });
-}
-
 function returnButton() {
-    document.getElementById('return-button').addEventListener('click', function() {
+    const returnButton = document.getElementById('return-button');
+    returnButton.addEventListener('click', function() {
         // const optionsMenu = document.getElementById('option-menu');
         // optionsMenu.style.display = "none";
 
         fetchPosts();
     });
-}
+};
+
+function dashboardButton() {
+    const dashboardButton = document.getElementById('dashboard-button');
+
+    if (dashboardButton) {
+        dashboardButton.addEventListener('click', function() {
+            window.location.href = "/dashboard";
+        });
+    };
+};
 
 function logoutButton() {
     document.getElementById('logout-button').addEventListener('click', function() {
@@ -620,6 +596,7 @@ function setupDraggableForm({
 
 document.addEventListener("DOMContentLoaded", (event) => {
     returnButton();
+    dashboardButton();
     logoutButton();
     fetchPosts();
     fetchAnnouncement();

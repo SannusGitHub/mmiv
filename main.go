@@ -16,7 +16,12 @@ func main() {
 	controller.OpenSQL()
 	defer controller.CloseSQL()
 
-	// img directory for handling on-platform images
+	/*
+		TODO: figure out how to solve the problem of valid html pages requiring exact pathing:
+		i.e whenever I type in "/home" for example, the pathing works, although a trailing slash will redir. to 404
+	*/
+
+	// img directory for handling on-platform resources (such as img)
 	mux.HandleFunc("/static/img/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path[len("/static/img/"):]
 		filePath := "./static/img/" + path
@@ -163,6 +168,16 @@ func main() {
 	// login page serve section
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./static/login/login.html")
+	})
+
+	// dashboard page serve function
+	mux.HandleFunc("/dashboard", func(w http.ResponseWriter, r *http.Request) {
+		if !controller.DoesUserMatchRank(r, "2") {
+			http.Redirect(w, r, "/404", http.StatusSeeOther)
+			return
+		}
+
+		http.ServeFile(w, r, "./static/private/dashboard.html")
 	})
 
 	// api calls

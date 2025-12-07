@@ -1,0 +1,27 @@
+<head>
+    <link rel="stylesheet" href="/static/home/index.css">
+</head>
+<body>
+    <div class="main">
+        <div class="main-img">
+            <img src="/static/img/banners/mmiv_1.png">
+        </div>
+        <p style="text-align: center;">MANAGEMENT PANEL</p>
+        <div class="nav-bar accented">
+            <p class="button clickable" id="return-button">Return</p>
+        </div>
+        <div id="content">
+            <div id="segment">
+                <p>CREATE ANNOUNCEMENT</p>
+                <form class="announcement-form" id="announcement-form" enctype="multipart/form-data">
+                    <textarea id="announcement-content" name="content" placeholder=""></textarea>
+                    <p id="error-text" style="color: red;"></p>
+                    <button type="submit">Submit</button>
+                </form>
+                <button id="remove-announcement-button">Remove Announcement</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/static/private/dashboard.mjs"></script>
+</body>

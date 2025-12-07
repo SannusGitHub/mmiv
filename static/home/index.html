@@ -8,12 +8,15 @@
             <img src="/static/img/banners/mmiv_1.png">
         </div>
         <div class="nav-bar accented">
-            <p class="button clickable" id="return-button">Return</p>
+            <p class="button clickable" id="return-button" style="display: none;">Return</p>
+            {{if .IsAdmin}}
+            <p class="button clickable" id="dashboard-button">Dashboard</p>
+            {{end}}
             <p class="button clickable" id="post-button">Post</p>
             <p class="button clickable" id="logout-button">Logout</p>
         </div>
         <div id="announcement" class="announcement">
-            <p id="announcement-text">ANNOUNCEMENT: This is a cool ass announcement.</p>
+            <p id="announcement-text"></p>
         </div>
         <div id="content">
         </div>
@@ -42,7 +45,7 @@
         </form>
     </div>
     <div class="footer">
-        <p>(c) MMIV 2025 - FOREVER</p>
+        <p>(c) MMIV 2025</p>
     </div>
 
     <script type="module" src="/static/home/index.mjs"></script>

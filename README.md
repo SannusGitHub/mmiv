@@ -22,3 +22,7 @@ light and fast setup.
 * Does not include rate limiting and safety features
 * Has not been tested much, no unit / integration tests
 * Not built with efficient scalability in mind
+
+## Sample Login Accounts
+* sannu -> admin
+* newUser -> password

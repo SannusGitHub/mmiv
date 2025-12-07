@@ -38,7 +38,6 @@ func AddAnnouncement(w http.ResponseWriter, r *http.Request) {
 
 func RemoveAnnouncement(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "2") {
-		fmt.Printf("Rank mismatch in RemoveAnnouncement, invalid perms!\n")
 		http.Error(w, "Invalid permission trying to remove announcement!", http.StatusUnsupportedMediaType)
 		return
 	}
@@ -65,7 +64,6 @@ func RequestAnnouncement(w http.ResponseWriter, r *http.Request) {
 	err := db.QueryRow(query).Scan(&content)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			fmt.Printf("Warning: no valid announcements, returning empty!\n")
 			content = ""
 		} else {
 			log.Fatal(err)

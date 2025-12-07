@@ -3,8 +3,12 @@ package controller
 import (
 	"bufio"
 	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -88,6 +92,34 @@ func CountFileLines(fileName string) int {
 		count++
 	}
 	return count
+}
+
+func TruncateFilename(original string, maxBaseLen int) string {
+	ext := filepath.Ext(original)
+	base := strings.TrimSuffix(original, ext)
+
+	base = regexp.MustCompile(`[^a-zA-Z0-9._-]`).ReplaceAllString(base, "_")
+
+	if len(base) > maxBaseLen {
+		base = base[:maxBaseLen]
+	}
+
+	return base + ext
+}
+
+func IsAcceptedMIME(file multipart.File, acceptedMIMEs []string) bool {
+	buf := make([]byte, 512)
+	n, _ := file.Read(buf)
+	file.Seek(0, io.SeekStart)
+
+	mime := http.DetectContentType(buf[:n])
+
+	for _, m := range acceptedMIMEs {
+		if mime == m {
+			return true
+		}
+	}
+	return false
 }
 
 func IsAcceptedFileFormat(filename string, acceptedFormats []string) bool {

@@ -33,8 +33,14 @@ import (
 	and other stuff that may degrade the quality of the platform in some way
 */
 
-var acceptedFileFormats = []string{
+var acceptedExts = []string{
 	".jpg", ".jpeg", ".png", ".gif",
+}
+
+var acceptedMIMEs = []string{
+	"image/jpeg",
+	"image/png",
+	"image/gif",
 }
 
 /*
@@ -125,7 +131,7 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		defer file.Close()
 
-		if !IsAcceptedFileFormat(handler.Filename, acceptedFileFormats) {
+		if !IsAcceptedFileFormat(handler.Filename, acceptedExts) {
 			fmt.Printf("User fed in unaccepted file format of %s, aborting...\n", handler.Filename)
 			http.Error(w, "Unsupported file format!", http.StatusUnsupportedMediaType)
 			return
@@ -234,8 +240,6 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 }
 
 func RequestPost(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Attempting post request...")
-
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in RequestPost, invalid perms!\n")
 		return
@@ -426,28 +430,32 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		defer file.Close()
 
-		if !IsAcceptedFileFormat(handler.Filename, acceptedFileFormats) {
-			fmt.Printf("User fed in unaccepted file format of %s, aborting...\n", handler.Filename)
+		if !IsAcceptedFileFormat(handler.Filename, acceptedExts) ||
+			!IsAcceptedMIME(file, acceptedMIMEs) {
 			http.Error(w, "Unsupported file format!", http.StatusUnsupportedMediaType)
 			return
 		}
 
-		uniqueName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), handler.Filename)
+		safeName := TruncateFilename(handler.Filename, 64)
+		uniqueName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), safeName)
 		imagePath = filepath.Join("uploads", uniqueName)
 		dst, err := os.Create(imagePath)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Printf("Error in os.Create() of imagefile!\n")
+			http.Error(w, "Encountered error with file on back-end.", http.StatusForbidden)
 			return
 		}
 		defer dst.Close()
 
 		_, err = io.Copy(dst, file)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Printf("Error in io.Copy() of imagefile!\n")
+			http.Error(w, "Encountered error with file on back-end.", http.StatusForbidden)
 			return
 		}
 	} else if err != http.ErrMissingFile {
-		log.Fatal(err)
+		fmt.Printf("Error, image file seems to be missing!\n")
+		http.Error(w, "Encountered error with file on back-end.", http.StatusForbidden)
 		return
 	}
 
@@ -515,7 +523,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 func RequestComment(w http.ResponseWriter, r *http.Request) {
 	if !DoesUserMatchRank(r, "1") {
 		fmt.Printf("Rank mismatch in RequestComments, invalid perms!\n")
-		http.Error(w, "Invalid permission when trying to remove comment!", http.StatusUnsupportedMediaType)
+		http.Error(w, "Invalid permission when trying to request comment!", http.StatusUnsupportedMediaType)
 		return
 	}
 
