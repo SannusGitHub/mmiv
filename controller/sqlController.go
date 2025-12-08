@@ -2,7 +2,6 @@ package controller
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -17,7 +16,6 @@ func OpenSQL() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("creating posts...")
 	WriteToSQL(`
 		CREATE TABLE IF NOT EXISTS posts (
 		id INTEGER PRIMARY KEY,
@@ -57,6 +55,12 @@ func OpenSQL() {
 	)`)
 
 	WriteToSQL(`
+		CREATE TABLE IF NOT EXISTS emoticons (
+		name TEXT NOT NULL
+	)`)
+	LoadEmoticonsFromDB()
+
+	WriteToSQL(`
 		CREATE TABLE IF NOT EXISTS global_ids (
 		id INTEGER PRIMARY KEY AUTOINCREMENT
 	)`)
@@ -74,19 +78,19 @@ func WriteToSQL(execString string, args ...interface{}) error {
 	return nil
 }
 
-func QueryFromSQL(execString string, args ...interface{}) string {
+func QueryFromSQL(execString string, args ...interface{}) (string, error) {
 	var result string
 
 	err := db.QueryRow(execString, args...).Scan(&result)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return "not found"
+			return "", err
 		}
 
-		log.Fatal(err)
+		return "", err
 	}
 
-	return result
+	return result, nil
 }
 
 func CloseSQL() {

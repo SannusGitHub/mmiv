@@ -142,7 +142,11 @@ func main() {
 
 		token := controller.GetCookie(r, "userSessionToken")
 		username := controller.GetUsernameFromCookie(r, "userSessionToken")
-		id := controller.QueryFromSQL("SELECT id FROM USERS WHERE username = ?", username)
+		id, err := controller.QueryFromSQL("SELECT id FROM USERS WHERE username = ?", username)
+		if err != nil {
+			fmt.Println("Error: Could not query ID of user! Does not exist?")
+		}
+
 		isAdmin := controller.DoesUserMatchRank(r, "2")
 
 		if token == nil || username == "" {
@@ -239,6 +243,14 @@ func main() {
 
 	mux.HandleFunc("/api/requestAnnouncement", func(w http.ResponseWriter, r *http.Request) {
 		controller.RequestAnnouncement(w, r)
+	})
+
+	mux.HandleFunc("/api/addEmoticon", func(w http.ResponseWriter, r *http.Request) {
+		controller.AddEmoticon(w, r)
+	})
+
+	mux.HandleFunc("/api/deleteEmoticon", func(w http.ResponseWriter, r *http.Request) {
+		controller.DeleteEmoticon(w, r)
 	})
 
 	// run server

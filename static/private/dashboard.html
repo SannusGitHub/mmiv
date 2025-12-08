@@ -6,8 +6,7 @@
         <div class="main-img">
             <img src="/static/img/banners/mmiv_1.png">
         </div>
-        <p style="text-align: center;">MANAGEMENT PANEL</p>
-        <div class="nav-bar accented">
+        <div class="accented nav-bar">
             <p class="button clickable" id="return-button">Return</p>
         </div>
         <div id="content">
@@ -16,9 +15,19 @@
                 <form class="announcement-form" id="announcement-form" enctype="multipart/form-data">
                     <textarea id="announcement-content" name="content" placeholder=""></textarea>
                     <p id="error-text" style="color: red;"></p>
-                    <button type="submit">Submit</button>
+                    <button type="button" id="add-announcement-button">Add Announcement</button>
+                    <button type="button" id="remove-announcement-button">Remove Announcement</button>
                 </form>
-                <button id="remove-announcement-button">Remove Announcement</button>
+            </div>
+            <div id="segment">
+                <p>CREATE EMOTICON</p>
+                <form id="emoticon-form">
+                    <label for="emoticon-content">Emoticon Content:</label>
+                    <input type="text" id="emoticon-content" name="emoticon-content">
+
+                    <button type="button" id="submit-emoticon-button">Submit Emoticon</button>
+                    <button type="button" id="remove-emoticon-button">Remove Emoticon</button>
+                </form>
             </div>
         </div>
     </div>

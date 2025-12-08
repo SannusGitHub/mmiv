@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -31,6 +32,26 @@ import (
 
 	NOTE: also, should probably figure out how ratelimiting works in order to avoid api-spam slop
 	and other stuff that may degrade the quality of the platform in some way
+
+	TODO:
+		* page system for posts (start from nr. / cont. from nr.)
+		* thumbnail compression for posts (?)
+		* "message too long, click here to expand" feature for long posts
+		* message length limit (250 characters maybe) (?)
+		* hide post / comment
+
+	FIXME:
+		* deletion of posts causes a display desync for some reason
+		reproduction steps:
+			* create a post of A
+			* delete a post of A
+			* create a post of B
+			* appears post A
+			* create a post of C
+			* appears post B...
+
+		caused by pagination with desync: offset specifically
+
 */
 
 var acceptedExts = []string{
@@ -69,6 +90,11 @@ type PostData struct {
 	CanPin       *bool  `json:"canpin,omitempty"`
 	CanLock      *bool  `json:"canlock,omitempty"`
 	HasOwnership *bool  `json:"hasownership,omitempty"`
+}
+
+type PostRequest struct {
+	DisplayFromPostNumber int `json:"displayfrompostnumber"`
+	AmountOfPostsRequired int `json:"amountofpostsrequired"`
 }
 
 /*
@@ -131,8 +157,7 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		defer file.Close()
 
-		if !IsAcceptedFileFormat(handler.Filename, acceptedExts) {
-			fmt.Printf("User fed in unaccepted file format of %s, aborting...\n", handler.Filename)
+		if !IsAcceptedFileFormat(handler.Filename, acceptedExts) || !IsAcceptedMIME(file, acceptedMIMEs) {
 			http.Error(w, "Unsupported file format!", http.StatusUnsupportedMediaType)
 			return
 		}
@@ -161,8 +186,10 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	postContent := r.FormValue("postcontent")
+	postContent = html.EscapeString(postContent)
 	isAnonymous := ParseBoolOrFalse(r.FormValue("isanonymous"))
 
+	// check for locking and pinning, whether user has auth to do it and default to false if not
 	var locked bool
 	var pinned bool
 	if DoesUserMatchRank(r, "2") {
@@ -205,7 +232,12 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
-	postOwner := QueryFromSQL(`SELECT username FROM posts WHERE id = ?`, data.Id)
+	postOwner, err := QueryFromSQL(`SELECT username FROM posts WHERE id = ?`, data.Id)
+	if err != nil {
+		fmt.Println("Warning: Can't get post owner! Invalidating delete...")
+		return
+	}
+
 	if !DoesUserMatchRank(r, "2") {
 		if currentUsername != postOwner {
 			fmt.Println("DeletePost request discarded due to invalid perms")
@@ -213,7 +245,12 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	postImagePath := QueryFromSQL(`SELECT imagepath FROM posts WHERE id = ?`, data.Id)
+	postImagePath, err := QueryFromSQL(`SELECT imagepath FROM posts WHERE id = ?`, data.Id)
+	if err != nil {
+		fmt.Println("Warning: Can't get getting postImagePath! Defaulting to empty...", err)
+		postImagePath = ""
+	}
+
 	if postImagePath != "" {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -245,8 +282,31 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := `SELECT id, username, postcontent, imagepath, timestamp, pinned, locked, isanonymous FROM POSTS ORDER BY pinned DESC, id DESC`
-	rows, err := db.Query(query)
+	// handle the first request: we ask from what index and how many posts
+	displayFromStr := r.FormValue("displayfrompostnumber")
+	amountReqStr := r.FormValue("amountofpostsrequested")
+
+	displayFromInt, err := strconv.Atoi(displayFromStr)
+	if err != nil {
+		fmt.Println("Invalid displayfrompostnumber:", err)
+		displayFromInt = 1
+	}
+
+	amountReqInt, err := strconv.Atoi(amountReqStr)
+	if err != nil {
+		fmt.Println("Invalid amountofpostsrequested:", err)
+		amountReqInt = 20
+	}
+
+	// then we get the actual posts themselves
+	query := `
+		SELECT id, username, postcontent, imagepath, timestamp, pinned, locked, isanonymous
+		FROM POSTS
+		ORDER BY pinned DESC, id DESC
+		LIMIT ? OFFSET ?
+	`
+
+	rows, err := db.Query(query, amountReqInt, displayFromInt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			fmt.Println("No posts found, returning null...")
@@ -309,6 +369,9 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 			post.CanPin = &canPin
 			post.CanLock = &canLock
 		}
+
+		// deal with emoticons
+		post.PostContent = RegexEmoticons(post.PostContent)
 
 		posts = append(posts, post)
 	}
@@ -430,8 +493,7 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		defer file.Close()
 
-		if !IsAcceptedFileFormat(handler.Filename, acceptedExts) ||
-			!IsAcceptedMIME(file, acceptedMIMEs) {
+		if !IsAcceptedFileFormat(handler.Filename, acceptedExts) || !IsAcceptedMIME(file, acceptedMIMEs) {
 			http.Error(w, "Unsupported file format!", http.StatusUnsupportedMediaType)
 			return
 		}
@@ -464,6 +526,7 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	postContent := r.FormValue("postcontent")
+	postContent = html.EscapeString(postContent)
 	isAnonymous := ParseBoolOrFalse(r.FormValue("isanonymous"))
 	ParentPostID := r.FormValue("parentpostid")
 
@@ -486,15 +549,25 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
-	postOwner := QueryFromSQL(`SELECT username FROM posts WHERE id = ?`, data.Id)
+	commentOwner, err := QueryFromSQL(`SELECT username FROM comments WHERE id = ?`, data.Id)
+	if err != nil {
+		fmt.Println("Warning: Can't get comment owner for some reason! commentOwner is: ", commentOwner)
+		return
+	}
+
 	if !DoesUserMatchRank(r, "2") {
-		if currentUsername != postOwner {
+		if currentUsername != commentOwner {
 			fmt.Println("DeleteComment request discarded due to invalid perms")
 			return
 		}
 	}
 
-	commentImagePath := QueryFromSQL(`SELECT imagepath FROM comments WHERE id = ?`, data.Id)
+	commentImagePath, err := QueryFromSQL(`SELECT imagepath FROM comments WHERE id = ?`, data.Id)
+	if err != nil {
+		fmt.Println("Warning: Can't commentImagePath! Defaulting to empty...")
+		commentImagePath = ""
+	}
+
 	if commentImagePath != "" {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -572,6 +645,9 @@ func RequestComment(w http.ResponseWriter, r *http.Request) {
 			hasOwnership = true
 			comment.HasOwnership = &hasOwnership
 		}
+
+		// deal with emoticons
+		comment.PostContent = RegexEmoticons(comment.PostContent)
 
 		// add a marker to differentiate front-end whether a post element is a comment
 		// yes i'm doing it this way. there's probably a better way. sue me.

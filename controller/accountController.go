@@ -176,17 +176,28 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUserRank(username string) string {
-	return QueryFromSQL(`
+	query, err := QueryFromSQL(`
 		SELECT rank FROM USERS WHERE username = ?
 	`, username)
+	if err != nil {
+		fmt.Println("Error validating GetUserRank, defaulting...")
+		query = ""
+	}
+
+	return query
 }
 
 func CheckCredentials(username, password string) bool {
-	passwordHash := QueryFromSQL(`
+	passwordHash, err := QueryFromSQL(`
 		SELECT password FROM USERS WHERE username = ?
 	`, username)
+	if err != nil {
+		fmt.Println("Error validating password, defaulting...")
+		passwordHash = ""
+	}
+	verifiedPassword := VerifyPassword(password, passwordHash)
 
-	return VerifyPassword(password, passwordHash)
+	return verifiedPassword
 }
 
 func HashPassword(password string) (string, error) {

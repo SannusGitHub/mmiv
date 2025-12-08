@@ -17,6 +17,8 @@ light and fast setup.
          * Viewing posts and comments
          * Creating posts and comments
      * Permission-gated sections
+     * Emoticon support
+     * Site-wide announcement support
 * Accounts
      * Logging in & Registering
      * Username, Hashed Password

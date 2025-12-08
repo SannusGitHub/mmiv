@@ -225,7 +225,7 @@ class Post {
 
         const contentP = document.createElement('p');
         contentP.className = 'text-content';
-        contentP.textContent = this.postcontent;
+        contentP.innerHTML = this.postcontent;
 
         let contentImg = null;
         if (this.imagepath !== null && this.imagepath !== "") {
@@ -341,6 +341,53 @@ export function fetchPosts() {
         }
     });
 
+    // DISPLAY POST NUMBER AND AMOUNT OF POSTS CODE, MOVE THIS TO
+    // A SMALL UI ELEMENT LATER POTENTIALLY
+    const requestFormData = new FormData();
+    requestFormData.append("displayfrompostnumber", 1);
+    requestFormData.append("amountofpostsrequested", 20);
+
+    fetch('/api/requestPost', {
+        method: 'POST',
+        body: requestFormData
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error("Failed");
+        };
+        
+        return response.json();
+    }).then(data => {
+        console.log("Success:", data);
+        
+        currentPosts.clear();
+        data.forEach((element) => {
+            const newPost = new Post({
+                id: element.id,
+                username: element.username,
+                postcontent: element.postcontent,
+                imagepath: element.imagepath,
+                commentcount: element.commentcount,
+                timestamp: element.timestamp,
+                pinned: element.pinned,
+                locked: element.locked,
+                canpin: element.canpin,
+                canlock: element.canlock,
+                hasownership: element.hasownership,
+                iscomment: element.iscomment,
+                clickFunc: function() {
+                    fetchComments(element);
+                }
+            });
+
+            currentPosts.set(newPost.id, newPost);
+        });
+
+        loadPosts();
+    }).catch(error => {
+        console.error("Error:", error);
+    });
+
+    /*
     fetch('/api/requestPost', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -380,6 +427,7 @@ export function fetchPosts() {
     }).catch(error => {
         console.error("Error:", error);
     });
+    */
 
     const returnButton = document.getElementById('return-button');
     returnButton.style = "display: none";

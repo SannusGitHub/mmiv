@@ -14,15 +14,13 @@ html, body {
 .main-img {
     justify-content: center;
     display: flex;
-    padding: 1em;
+    padding-top: 1em;
+    margin: 0 2em;
 }
 
-.nav-bar {
-    justify-content: right;
-    display: flex;
-    gap: 0.5rem;
-    padding: 0rem 1rem;
-    align-items: center;
+.main-img img {
+    max-width: 100%;
+    height: auto;
 }
 
 .post-label {
@@ -80,6 +78,14 @@ p.button:hover {
     border: 1px solid #777780;
     border-left-style: none;
     border-top-style: none;
+}
+
+.nav-bar {
+    margin-top: 0;
+    justify-content: right;
+    display: flex;
+    gap: 0.5rem;
+    padding: 0rem 1rem;
 }
 
 .resizable {
