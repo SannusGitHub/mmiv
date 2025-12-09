@@ -308,6 +308,7 @@ export function fetchPosts() {
             const textInput = document.getElementById("post-content");
             const lockInput = document.getElementById("lock-post");
             const pinInput = document.getElementById("pin-post");
+            const rejectSanitizeInput = document.getElementById("reject-sanitize");
             const anonInput = document.getElementById("anonymous-post");
             const errorText = document.getElementById("error-text");
 
@@ -316,6 +317,7 @@ export function fetchPosts() {
             formData.append("image", fileInput.files[0]);
             formData.append("locked", lockInput?.checked ?? false);
             formData.append("pinned", pinInput?.checked ?? false);
+            formData.append("reject-sanitize", rejectSanitizeInput?.checked ?? false);
             formData.append("isanonymous", anonInput?.checked ?? false);
 
             fetch('/api/addPost', {
@@ -444,6 +446,7 @@ function fetchComments(postParent) {
             const textInput = document.getElementById("post-content");
             const anonInput = document.getElementById("anonymous-post");
             const errorText = document.getElementById("error-text");
+            const rejectSanitizeInput = document.getElementById("reject-sanitize");
             const parentpostID = postParent.id;
             
             const formData = new FormData();
@@ -451,6 +454,7 @@ function fetchComments(postParent) {
             formData.append("image", fileInput.files[0]);
             formData.append("parentpostid", parentpostID);
             formData.append("isanonymous", anonInput?.checked ?? false);
+            formData.append("reject-sanitize", rejectSanitizeInput?.checked ?? false);
 
             fetch('/api/addComment', {
                 method: "POST",

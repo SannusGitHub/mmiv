@@ -65,6 +65,17 @@ p.button:hover {
     color: #848db8;
 }
 
+a:link, a:visited {
+    color: #848db8;
+
+    text-decoration: underline;
+    text-decoration-style: dotted;
+}
+
+a:hover {
+    color: #6363a8;
+}
+
 .emoticon {
     width: 16px;
     height: 16px;

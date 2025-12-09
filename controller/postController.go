@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -40,7 +41,7 @@ import (
 		* message length limit (250 characters maybe) (?)
 		* hide post / comment
 
-	FIXME:
+	FIXME / BUGS:
 		* deletion of posts causes a display desync for some reason
 		reproduction steps:
 			* create a post of A
@@ -51,6 +52,10 @@ import (
 			* appears post B...
 
 		caused by pagination with desync: offset specifically
+
+		clicking on a post with a link both opens the new tab and also the post itself for comments
+
+		link support for unsanitized post (regex messes it up)
 
 */
 
@@ -186,12 +191,17 @@ func AddPost(w http.ResponseWriter, r *http.Request) {
 
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	postContent := r.FormValue("postcontent")
-	postContent = html.EscapeString(postContent)
 	isAnonymous := ParseBoolOrFalse(r.FormValue("isanonymous"))
 
+	// check whether we should sanitize or not (useful if moderators want better control with injecting HTML)
+	var shouldBeDesanitized = ParseBoolOrFalse(r.FormValue("reject-sanitize"))
+	if !(DoesUserMatchRank(r, "2") && shouldBeDesanitized) {
+		fmt.Println("Sanitizing post content to avoid malicious actions...")
+		postContent = html.EscapeString(postContent)
+	}
+
 	// check for locking and pinning, whether user has auth to do it and default to false if not
-	var locked bool
-	var pinned bool
+	var locked, pinned bool
 	if DoesUserMatchRank(r, "2") {
 		locked = ParseBoolOrFalse(r.FormValue("locked"))
 		pinned = ParseBoolOrFalse(r.FormValue("pinned"))
@@ -373,6 +383,9 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 		// deal with emoticons
 		post.PostContent = RegexEmoticons(post.PostContent)
 
+		// link support
+		post.PostContent = RegexLink(post.PostContent)
+
 		posts = append(posts, post)
 	}
 
@@ -526,9 +539,16 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 
 	currentUsername := GetUsernameFromCookie(r, "userSessionToken")
 	postContent := r.FormValue("postcontent")
-	postContent = html.EscapeString(postContent)
 	isAnonymous := ParseBoolOrFalse(r.FormValue("isanonymous"))
 	ParentPostID := r.FormValue("parentpostid")
+
+	// check whether we should sanitize or not (useful if moderators want better control with injecting HTML)
+	var shouldBeDesanitized = ParseBoolOrFalse(r.FormValue("reject-sanitize"))
+	fmt.Println("Sanitization:", shouldBeDesanitized)
+	if !(DoesUserMatchRank(r, "2") && shouldBeDesanitized) {
+		fmt.Println("Sanitizing comment content to avoid malicious actions...")
+		postContent = html.EscapeString(postContent)
+	}
 
 	WriteToSQL(`
 		INSERT INTO COMMENTS (id, parentpostid, username, postcontent, imagepath, isanonymous)
@@ -649,13 +669,23 @@ func RequestComment(w http.ResponseWriter, r *http.Request) {
 		// deal with emoticons
 		comment.PostContent = RegexEmoticons(comment.PostContent)
 
+		// link support
+		comment.PostContent = RegexLink(comment.PostContent)
+
 		// add a marker to differentiate front-end whether a post element is a comment
 		// yes i'm doing it this way. there's probably a better way. sue me.
 		comment.IsComment = true
-
 		comments = append(comments, comment)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(comments)
+}
+
+func RegexLink(contentString string) string {
+	linkRegex := regexp.MustCompile(`(https||http)?://[^\s]+`)
+
+	return linkRegex.ReplaceAllStringFunc(contentString, func(url string) string {
+		return fmt.Sprintf(`<a href="%s" target="_blank">%s</a>`, url, url)
+	})
 }
