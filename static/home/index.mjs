@@ -609,21 +609,22 @@ function setupDraggableForm({
     }
 
     let offsetX = 0, offsetY = 0, isDragging = false;
-
+    
     grabBar.onmousedown = (e) => {
         isDragging = true;
         const rect = form.getBoundingClientRect();
-        offsetX = e.clientX - rect.left;
-        offsetY = e.clientY - rect.top;
+        offsetX = e.pageX - (rect.left + window.scrollX);
+        offsetY = e.pageY - (rect.top + window.scrollY);
         document.body.style.userSelect = 'none';
     };
 
     document.onmousemove = (e) => {
         if (isDragging) {
-            form.style.left = `${e.clientX - offsetX}px`;
-            form.style.top = `${e.clientY - offsetY}px`;
+            form.style.left = `${e.pageX - offsetX}px`;
+            form.style.top = `${e.pageY - offsetY}px`;
         }
     };
+
 
     document.onmouseup = () => {
         isDragging = false;

@@ -29,7 +29,8 @@ light and fast setup.
      * IDs, timestamps, total replies
      * Optional hidden username posting
      * Optional PNG, GIF, JPEG uploads
-         * With MIME & Ext checks
+     * Custom emoticon support
+     * Hyperlink support
 * Moderating
      * Pinning, locking and deletion of user posts
 
