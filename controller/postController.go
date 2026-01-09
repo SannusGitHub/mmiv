@@ -298,13 +298,11 @@ func RequestPost(w http.ResponseWriter, r *http.Request) {
 
 	displayFromInt, err := strconv.Atoi(displayFromStr)
 	if err != nil {
-		fmt.Println("Invalid displayfrompostnumber:", err)
 		displayFromInt = 1
 	}
 
 	amountReqInt, err := strconv.Atoi(amountReqStr)
 	if err != nil {
-		fmt.Println("Invalid amountofpostsrequested:", err)
 		amountReqInt = 20
 	}
 

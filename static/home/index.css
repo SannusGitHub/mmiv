@@ -9,6 +9,10 @@ html, body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+
+    image-rendering: pixelated;
+    background-image: url('/static/login/img/static.gif');
+    background-color: #1B1B1E;
 }
 
 .main-img {

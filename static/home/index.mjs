@@ -346,7 +346,7 @@ export function fetchPosts() {
     // DISPLAY POST NUMBER AND AMOUNT OF POSTS CODE, MOVE THIS TO
     // A SMALL UI ELEMENT LATER POTENTIALLY
     const requestFormData = new FormData();
-    requestFormData.append("displayfrompostnumber", 1);
+    requestFormData.append("displayfrompostnumber", 0);
     requestFormData.append("amountofpostsrequested", 20);
 
     fetch('/api/requestPost', {
